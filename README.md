@@ -19,7 +19,12 @@ If there is a gui to trim the files then you can use millisecond trimming in ffm
 
 Ghetto but what I'm goin for: https://github.com/meowtec/audio-cutter
 
-Read: https://stackoverflow.com/questions/8621078/can-i-use-javascript-to-split-up-an-mp3-file-into-smaller-mp3-files
+I just need something to display the waveform and allow for selecting.
+
+this much better: https://github.com/bbc/peaks.js/tree/master
+
+with that I could conver the whole video to audio then they could add markers while they listen instead of watch... but that's no fun.
+
 
 1. input youtube video url
 2. open iframe with video
