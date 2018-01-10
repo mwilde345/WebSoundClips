@@ -22,18 +22,18 @@
     <div id="button2">
         <button onclick="resetTime()">Reset</button>
     </div>
+    <div id="button3">
+        <button onclick="undoTime()">Undo</button>
+    </div>
     <div id="output">
-        <div class="col-md-2" id="start" >
-            <table id="startTable">
-                <tbody>
-                    <tr><th>Start</th></tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="col-md-2" id="stop" >
-            <table id="stopTable">
-                <tbody>
-                    <tr><th>Stop</th></tr>
+        <div class="col-md-2" id="tableContainer" >
+            <table id="table" class="table">
+                <thead>
+                    <tr>
+                        <th>Start</th><th>Stop</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
                 </tbody>
             </table>
         </div>
@@ -42,7 +42,7 @@
     <script>
       // 2. This code loads the IFrame Player API code asynchronously.
       var tag = document.createElement('script');
-
+        //https://www.youtube.com/watch?v=SrLZgP-OR6s
       tag.src = "https://www.youtube.com/iframe_api";
       var firstScriptTag = document.getElementsByTagName('script')[0];
       firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
@@ -54,11 +54,12 @@
         player = new YT.Player('player', {
           height: '390',
           width: '640',
-          videoId: 'M7lc1UVf-VE',
+          videoId: 'V_laNt7Sh6g',
           events: {
             'onReady': onPlayerReady,
             'onStateChange': onPlayerStateChange
-          }
+          },
+          origin: "https://www.youtube.com"
         });
       }
 
@@ -84,31 +85,54 @@
       var stopPressed = false;
       function logTime(){
           //add a link to each entry that moves the player to that time
+          //check if time > .5 so we don't go negative
         if(stopPressed==false&&startPressed==false){
             startPressed=true;
         }
         if(startPressed==true){
-            console.log("log start");
             stopPressed=true;
             startPressed=false;
-            $("#startTable tr:last").after('<tr><td>'+(player.getCurrentTime()-.5)+'</td></tr>');
+            insertTime(true);
             return;
         }
-         if(stopPressed==true){
-             console.log("log stop");
+        if(stopPressed==true){
              startPressed=true;
              stopPressed=false;
-            $("#stopTable tr:last").after('<tr><td>'+(player.getCurrentTime()-.5)+'</td></tr>');
-            return;
+             insertTime(false);
+             return;
          }
       }
 
+      function insertTime(isStart){
+        var currentTime = (player.getCurrentTime()-.5).toFixed(3);
+        var insertString = isStart? '<td><button onclick="seekTo(this)">'+currentTime+'</button></td>' : 
+            '<td><button onclick="seekTo(this)">'+currentTime+'</button></td>';
+        $insertedItem = $(insertString);
+        if(isStart){
+            $("#tableBody").append("<tr></tr>");
+            $("#tableBody tr:last").append($insertedItem);
+        }else{
+            $("#tableBody td:last").after($insertedItem);
+        }
+        $insertedItem.find("button").addClass("btn btn-info");
+      }
+
       function resetTime(){
+          //add button to remove the last row.
           startPressed = false;
           stopPressed = false;
-          $("#output").html('<div id="output"><div class="col-md-2" id="start" ><table id="startTable">'+
-            '<tbody><tr><th>Start</th></tr></tbody></table></div><div class="col-md-2" id="stop" >'+
-                '<table id="stopTable"><tbody><tr><th>Stop</th></tr></tbody></table></div></div>');
+          $("#table tbody").empty();
+      }
+
+      function undoTime(){
+        startPressed = !startPressed;
+        stopPressed = !stopPressed;
+        $("#table td:last").remove();
+      }
+
+      function seekTo(button){
+          var time=$(button).html();
+          player.seekTo(time);
       }
     </script>
   </body>
