@@ -25,6 +25,9 @@ this much better: https://github.com/bbc/peaks.js/tree/master
 
 with that I could conver the whole video to audio then they could add markers while they listen instead of watch... but that's no fun.
 
+this is a nice demo: 
+http://audiovideo.jeffreyeverhart.com/audio-annotation/peaks.html
+
 
 1. input youtube video url
 2. open iframe with video
