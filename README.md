@@ -34,6 +34,9 @@ https://scotch.io/@moeidsaleem/how-to-build-your-own-nodejs-server-in-4-minutes
 
 node http: https://nodejs.org/en/docs/guides/anatomy-of-an-http-transaction/
 
+download local file with node: https://stackoverflow.com/questions/7288814/download-a-file-from-nodejs-server-using-express
+
+routing in express js: http://expressjs.com/en/guide/routing.html
 
 1. input youtube video url
 2. open iframe with video
