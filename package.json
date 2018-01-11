@@ -1,0 +1,24 @@
+{
+  "name": "websoundclips",
+  "version": "1.0.0",
+  "description": "turn youtube videos into nicely formatted sound clips for alexa skills.",
+  "main": "test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mwilde345/WebSoundClips.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mwilde345/WebSoundClips/issues"
+  },
+  "homepage": "https://github.com/mwilde345/WebSoundClips#readme",
+  "dependencies": {
+    "express": "^4.16.2",
+    "horizon-youtube-mp3": "^1.8.1",
+    "peaks.js": "^0.9.5"
+  }
+}
