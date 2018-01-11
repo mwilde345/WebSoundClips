@@ -1,0 +1,29 @@
+{
+  "name": "peaks.js",
+  "main": "src/main.js",
+  "ignore": [
+    ".eslintrc",
+    "**/*.txt",
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "test_data"
+  ],
+  "dependencies": {
+    "requirejs": "~2.1.14"
+  },
+  "devDependencies": {},
+  "homepage": "https://github.com/bbcrd/peaks.js",
+  "version": "0.9.5",
+  "_release": "0.9.5",
+  "_resolution": {
+    "type": "version",
+    "tag": "v0.9.5",
+    "commit": "5ab3967a3253aa77190f05639f990a1025984705"
+  },
+  "_source": "https://github.com/bbcrd/peaks.js.git",
+  "_target": "^0.9.5",
+  "_originalSource": "peaks.js",
+  "_direct": true
+}

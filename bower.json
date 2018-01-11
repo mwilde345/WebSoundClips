@@ -1,0 +1,20 @@
+{
+  "name": "websoundclips",
+  "description": "turn youtube videos into nicely formatted sound clips for alexa skills.",
+  "main": "server.js",
+  "authors": [
+    "Wilde <wildmat@186590d2c0b7.ant.amazon.com>"
+  ],
+  "license": "ISC",
+  "homepage": "https://github.com/mwilde345/WebSoundClips",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "peaks.js": "^0.9.5"
+  }
+}

@@ -4,7 +4,8 @@
   "description": "turn youtube videos into nicely formatted sound clips for alexa skills.",
   "main": "test.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
@@ -20,5 +21,6 @@
     "express": "^4.16.2",
     "horizon-youtube-mp3": "^1.8.1",
     "peaks.js": "^0.9.5"
-  }
+  },
+  "devDependencies": {}
 }
