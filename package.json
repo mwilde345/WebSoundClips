@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/mwilde345/WebSoundClips#readme",
   "dependencies": {
+    "body-parser": "^1.18.2",
     "express": "^4.16.2",
     "horizon-youtube-mp3": "^1.8.1",
     "peaks.js": "^0.9.5"
