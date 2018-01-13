@@ -15,7 +15,7 @@
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
   <!-- <script src="node_modules/peaks.js/peaks.js"></script>  -->
   <script src="node_modules/peaks.js/peaks.js"></script>
-  
+
 </head>
 
 <body>
@@ -23,18 +23,12 @@
   <!-- Youtube Player Iframe and Logging buttons -->
   <!-- ######################################### -->
 
-  <div id="player"></div>
-  <div id="button1">
-    <button onclick="logTime()">Log Time</button>
-  </div>
-  <div id="button2">
-    <button onclick="resetTime()">Reset</button>
-  </div>
-  <div id="button3">
-    <button onclick="undoTime()">Undo</button>
-  </div>
-  <div id="button4">
-    <button onclick="download()">Download MP3</button>
+  <div id="player" class='container'></div>
+  <div id="buttons" class="btn-group" role="group">
+    <button id="logBtn" onclick="logTime()" class="btn btn-info">Log Time</button>
+    <button id="undoBtn" onclick="undoTime()" class="btn btn-warning">Undo</button>
+    <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
+    <button id="downloadBtn" onclick="download()" class="btn btn-success">Download MP3</button>
   </div>
 
   <!-- Table to store video times -->
@@ -60,65 +54,73 @@
 
   <div id="first-waveform-visualiser-container"></div>
   <div id="audioStuff" class="jumbotron">
-  <audio controls=controls src="swansonlocal.mp3" type="audio/mpeg">
-    Your browser does not support the audio element.
-  </audio>
-  
-  <div id="controls">
-    <div>
-      <button data-action="zoom-in">Zoom in</button>
-      <button data-action="zoom-out">Zoom out</button>
-      <button data-action="add-segment">Add a Segment at current time</button>
-      <button data-action="add-point">Add a Point at current time</button>
-      <button data-action="log-data">Log segments/points</button>
-    </div>
-    <div>
-      <input type="text" id="seek-time" value="0.0">
-      <button data-action="seek">Seek</button>
-    </div>
-  </div>
+    <audio controls=controls src="" type="audio/mpeg">
+      Your browser does not support the audio element.
+    </audio>
 
-  <div class="log">
-    <div id="segments" class="hide">
-      <h2>Segments</h2>
-      <table class="table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Label</th>
-            <th>Start time</th>
-            <th>End time</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
+    <div id="controls">
+      <div>
+        <button data-action="zoom-in">Zoom in</button>
+        <button data-action="zoom-out">Zoom out</button>
+        <button data-action="add-segment">Add a Segment at current time</button>
+        <button data-action="add-point">Add a Point at current time</button>
+        <button data-action="log-data">Log segments/points</button>
+      </div>
+      <div>
+        <input type="text" id="seek-time" value="0.0">
+        <button data-action="seek">Seek</button>
+      </div>
     </div>
 
-    <div id="points" class="hide">
-      <h2>Points</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Label</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
+    <div class="log">
+      <div id="segments" class="hide">
+        <h2>Segments</h2>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Label</th>
+              <th>Start time</th>
+              <th>End time</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="points" class="hide">
+        <h2>Points</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Label</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
-</div>
 
   <!-- Other js functions -->
   <!-- ################## -->
   <script src="js/playerjs.js"></script>
   <script src="js/peaksHelper.js"></script>
   <script>
+    $("#audioStuff").hide();
+    
     function download() {
+      $("#downloadBtn").prop("disabled", true);
+      if (peaksInstance != null) {
+        var r = confirm("Overwrite mp3 file?");
+        if (!r) return;
+        peaksInstance.destroy();
+      }
       var data = {};
       data.url = "https://www.youtube.com/watch?v=V_laNt7Sh6g";
       //allow overwrite! also if you push the download button multiple times,
@@ -130,39 +132,52 @@
         data: JSON.stringify(data),
         contentType: 'application/json',
         success: function (data) {
-          console.log(data);
-          $("#output").append("downloaded");
-          gatherData();
-          //var peaksInstance = Peaks.init(options);
+          var result = JSON.parse(data);
+          alert('download complete');
+          $("#downloadBtn").prop("disabled", false);
+          $("#audioStuff").show();
+          $("audio").prop("src",result.videoID+".mp3");
           //load <audio> tag with filename (so it gets the new file if overwritten)
           peaksFunction(peaks);
-          //peaksSetup();
-
+          addSegments();
         }
       })
     }
 
-    function gatherData() {
+    function gatherTimes() {
       var startTimes = [];
       var stopTimes = [];
       $("#table tr").each(function (index) {
+        if (index == 0) return true; //skip first row
         var col1 = $($(this).children()[0]).text();
-        startTimes.push(col1);
+        startTimes.push(parseFloat(col1));
         var col2 = $($(this).children()[1]).text();
-        stopTimes.push(col2);
+        if (col2.length) stopTimes.push(parseFloat(col2));
       });
+      if (startTimes.length > stopTimes.length) {
+        //TODO: this could be a problem if the +5 is greater than the max mp3 time...
+        stopTimes.push(startTimes[startTimes.length - 1] + 5.0);
+      }
+      return {
+        startTimes: startTimes,
+        stopTimes: stopTimes
+      };
     }
 
-    function peaksSetup() {
-      var myAudioContext = new AudioContext();
-      var p = Peaks.init({
-        container: document.querySelector('#peaks-container'),
-        mediaElement: document.querySelector('audio'),
-        audioContext: myAudioContext
-      });
-
-      p.on('peaks.ready', function () {
-        // do something when the waveform is displayed and ready
+    function addSegments(){
+      peaksInstance.on('peaks.ready',function(){
+        var timeSegments = gatherTimes();
+        timeSegments.startTimes.forEach(function(item, index){
+          console.log(item);
+          console.log(index);
+          peaksInstance.segments.add({
+            startTime: timeSegments.startTimes[index],
+            endTime: timeSegments.stopTimes[index],
+            labelText: "Segment "+index,
+            editable: true
+          });
+        });
+        renderSegments(peaksInstance);
       });
     }
     /* function editButtons(){

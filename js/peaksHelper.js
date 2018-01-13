@@ -1,4 +1,6 @@
 var myAudioContext = new AudioContext();
+var peaksInstance = null;
+var renderSegments = null;
 var peaksFunction = function (Peaks) {
   var options = {
     container: document.getElementById('first-waveform-visualiser-container'),
@@ -11,15 +13,15 @@ var peaksFunction = function (Peaks) {
     keyboard: true,
     pointMarkerColor: '#006eb0',
     showPlayheadTime: true,
-    //   waveformBuilderOptions: {
-    //         scale: 512,
-    //         amplitude_scaaaale: 512
-    //     }
+    waveformBuilderOptions: {
+        scale: 512,
+        //amplitude_scaaaale: 512
+    }
   };
 
-  var peaksInstance = Peaks.init(options);
-
-  var renderSegments = function (peaks) {
+  peaksInstance = Peaks.init(options);
+  
+  renderSegments = function (peaks) {
     var segmentsContainer = document.getElementById('segments');
     var segments = peaks.segments.getSegments();
     var html = '';
@@ -30,8 +32,8 @@ var peaksFunction = function (Peaks) {
       var row = '<tr>' +
         '<td>' + segment.id + '</td>' +
         '<td>' + segment.labelText + '</td>' +
-        '<td>' + segment.startTime + '</td>' +
-        '<td>' + segment.endTime + '</td>' +
+        '<td>' + segment.startTime.toFixed(1) + '</td>' +
+        '<td>' + segment.endTime.toFixed(1) + '</td>' +
         '<td>' + '<a href="#' + segment.id + '" data-action="play-segment" data-id="' + segment.id + '">Play</a>' + '</td>' +
         '<td>' + '<a href="#' + segment.id + '" data-action="remove-segment" data-id="' + segment.id + '">Remove</a>' + '</td>' +
         '</tr>';
@@ -57,7 +59,7 @@ var peaksFunction = function (Peaks) {
       var row = '<tr>' +
         '<td>' + point.id + '</td>' +
         '<td>' + point.labelText + '</td>' +
-        '<td>' + point.time + '</td>' +
+        '<td>' + point.time.toFixed(1) + '</td>' +
         '<td>' + '<a href="#' + point.id + '" data-action="remove-point" data-id="' + point.id + '">Remove</a>' + '</td>' +
         '</tr>';
 

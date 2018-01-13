@@ -58,7 +58,7 @@ function logTime() {
 }
 
 function insertTime(isStart) {
-  var currentTime = (player.getCurrentTime() - .8).toFixed(3);
+  var currentTime = (player.getCurrentTime() - .8).toFixed(1);
   currentTime = currentTime < 0 ? 0 : currentTime;
   var insertString = isStart ? '<td><button onclick="seekTo(this)">' + currentTime + '</button></td>' :
     '<td><button onclick="seekTo(this)">' + currentTime + '</button></td>';

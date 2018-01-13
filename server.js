@@ -12,15 +12,14 @@ app.post('/test', function (req, res) {
     // horizon.getInfo("http://youtube.com/watch?v=NEA0BLnpOtg", function(err, data){
     //     res.send(data);
     // });
-    
     console.log(JSON.stringify(req.body));
     var url = req.body.url;
-    
+    var videoID = url.replace(/(.*)(=)(.*)/,"$3");
     horizon.downloadToLocal(
         url,
         './',
-        'swansonlocal.mp3',
-        null, //{start:'02:15', end:'02:20'},
+        videoID+'.mp3',
+        null,//{start:'02:15', end:'02:20'},
         null,
         function (err, result) {
             //the result is the mp3 file. send it to the waveform generator
@@ -28,7 +27,7 @@ app.post('/test', function (req, res) {
             //res.send(result);
             if (result === horizon.successType.CONVERSION_FILE_COMPLETE) {
                 console.log(result);
-                res.send('donezo');
+                res.send(JSON.stringify({videoID: videoID}));
                 //res.send('finished');
                 //send isn't working, so probs download to local.
             }
