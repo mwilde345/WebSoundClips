@@ -38,6 +38,10 @@ download local file with node: https://stackoverflow.com/questions/7288814/downl
 
 routing in express js: http://expressjs.com/en/guide/routing.html
 
+node ffmpeg https://www.npmjs.com/package/ffmpeg
+
+
+
 horizon youtube thing uses youtubetransfer.com which has a 20 min video max. Maybe then, we should download multiple mp3 files based off the times they choose in the video. Can a +20 min video be downloaded if a limit is specified. 
 
 1. input youtube video url
