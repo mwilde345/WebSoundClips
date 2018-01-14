@@ -40,7 +40,9 @@ routing in express js: http://expressjs.com/en/guide/routing.html
 
 node ffmpeg https://www.npmjs.com/package/ffmpeg
 
+actually i dunno about that one. Use this for trimming: https://www.npmjs.com/package/trimp3
 
+some cmd running options: https://stackoverflow.com/questions/20643470/execute-a-command-line-binary-with-node-js
 
 horizon youtube thing uses youtubetransfer.com which has a 20 min video max. Maybe then, we should download multiple mp3 files based off the times they choose in the video. Can a +20 min video be downloaded if a limit is specified. 
 
