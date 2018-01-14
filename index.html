@@ -29,6 +29,7 @@
     <button id="undoBtn" onclick="undoTime()" class="btn btn-warning">Undo</button>
     <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
     <button id="downloadBtn" onclick="download()" class="btn btn-success">Download MP3</button>
+    <button id="trimBtn" onclick="trimPost()" class="btn btn-warning">Trim Clips</button>
   </div>
 
   <!-- Table to store video times -->
@@ -63,8 +64,7 @@
         <button data-action="zoom-in">Zoom in</button>
         <button data-action="zoom-out">Zoom out</button>
         <button data-action="add-segment">Add a Segment at current time</button>
-        <button data-action="add-point">Add a Point at current time</button>
-        <button data-action="log-data">Log segments/points</button>
+        <button data-action="log-data">Log segments</button>
       </div>
       <div>
         <input type="text" id="seek-time" value="0.0">
@@ -89,31 +89,18 @@
           </tbody>
         </table>
       </div>
-
-      <div id="points" class="hide">
-        <h2>Points</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Label</th>
-              <th>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-          </tbody>
-        </table>
-      </div>
     </div>
   </div>
+  <div id="trimOutput" class="container">
 
+  </div>
   <!-- Other js functions -->
   <!-- ################## -->
   <script src="js/playerjs.js"></script>
   <script src="js/peaksHelper.js"></script>
   <script>
     $("#audioStuff").hide();
-    
+    var videoID = "";
     function download() {
       $("#downloadBtn").prop("disabled", true);
       if (peaksInstance != null) {
@@ -137,11 +124,12 @@
           $("#downloadBtn").prop("disabled", false);
           $("#audioStuff").show();
           $("audio").prop("src",result.videoID+".mp3");
+          videoID = result.videoID;
           //load <audio> tag with filename (so it gets the new file if overwritten)
           peaksFunction(peaks);
           addSegments();
         }
-      })
+      });
     }
 
     function gatherTimes() {
@@ -164,6 +152,26 @@
       };
     }
 
+    function trimPost(){
+      var segments = peaksInstance.segments.getSegments();
+      segments.forEach(function(item, index){
+        var data = {};
+        data.start = item.startTime.toFixed(1);
+        data.end = item.endTime.toFixed(1);
+        data.videoID = videoID;
+        $.ajax({
+          type: "POST",
+          url: "/trim",
+          data: JSON.stringify(data),
+          contentType: 'application/json',
+          success: function (data) {
+            $("#trimOutput").append(data);
+          }
+        });
+      });
+      
+    }
+
     function addSegments(){
       peaksInstance.on('peaks.ready',function(){
         var timeSegments = gatherTimes();
@@ -180,14 +188,6 @@
         renderSegments(peaksInstance);
       });
     }
-    /* function editButtons(){
-          $("#button4").html("Save Edits");
-          //$("#");
-        }
-  
-        function saveEdits(){
-  
-        }*/
   </script>
 </body>
 

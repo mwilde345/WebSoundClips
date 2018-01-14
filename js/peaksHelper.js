@@ -48,31 +48,6 @@ var peaksFunction = function (Peaks) {
     }
   }
 
-  var renderPoints = function (peaks) {
-    var pointsContainer = document.getElementById('points');
-    var points = peaks.points.getPoints();
-    var html = '';
-
-    for (var i = 0; i < points.length; i++) {
-      var point = points[i];
-
-      var row = '<tr>' +
-        '<td>' + point.id + '</td>' +
-        '<td>' + point.labelText + '</td>' +
-        '<td>' + point.time.toFixed(1) + '</td>' +
-        '<td>' + '<a href="#' + point.id + '" data-action="remove-point" data-id="' + point.id + '">Remove</a>' + '</td>' +
-        '</tr>';
-
-      html += row;
-    }
-
-    pointsContainer.querySelector('tbody').innerHTML = html;
-
-    if (html.length) {
-      pointsContainer.classList = '';
-    }
-  }
-
   document.querySelector('[data-action="zoom-in"]').addEventListener('click', function () {
     peaksInstance.zoom.zoomIn();
   });
@@ -90,17 +65,8 @@ var peaksFunction = function (Peaks) {
     });
   });
 
-  document.querySelector('button[data-action="add-point"]').addEventListener('click', function () {
-    peaksInstance.points.add({
-      time: peaksInstance.player.getCurrentTime(),
-      labelText: "Test point",
-      editable: true
-    });
-  });
-
   document.querySelector('button[data-action="log-data"]').addEventListener('click', function (event) {
     renderSegments(peaksInstance);
-    renderPoints(peaksInstance);
   });
 
   document.querySelector('button[data-action="seek"]').addEventListener('click', function (event) {

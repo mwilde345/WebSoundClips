@@ -20,8 +20,10 @@
   "dependencies": {
     "body-parser": "^1.18.2",
     "express": "^4.16.2",
+    "fs": "0.0.1-security",
     "horizon-youtube-mp3": "^1.8.1",
-    "peaks.js": "^0.9.5"
+    "peaks.js": "^0.9.5",
+    "progress-stream": "^2.0.0"
   },
   "devDependencies": {}
 }
