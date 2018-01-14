@@ -3,9 +3,9 @@ turn youtube videos into nicely formatted sound clips for alexa skills.
 
 Audio Timeline: Convert video to mp3 and download Split mp3 into clips and put in folder Load clip in audacity and adjust trim and loudness. Export from audacity to mp3 in another folder. Compress those clips into 48k. Upload to s3.
 
-ffmpeg -i -ss 00:00:35 -to 00:00:41 -c copy
+ffmpeg -i \<input-file> -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 <output-file.mp3>
 
-ffmpeg -i -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 <output-file.mp3>
+ffmpeg -i \<input-file> -ss 00:00:35 -to 00:00:41 -c copy <output-file>
 
 you need a new naming schema for generating the files via commands. Also when open an audacity project to edit files, don't make it called a filename, then they're all appended with 1, 2, 3 etc.
 
