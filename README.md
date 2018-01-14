@@ -3,9 +3,9 @@ turn youtube videos into nicely formatted sound clips for alexa skills.
 
 Audio Timeline: Convert video to mp3 and download Split mp3 into clips and put in folder Load clip in audacity and adjust trim and loudness. Export from audacity to mp3 in another folder. Compress those clips into 48k. Upload to s3.
 
-ffmpeg -i -ss 00:00:35 -to 00:00:41 -c copy
+ffmpeg -i \<input-file> -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 \<output-file.mp3>
 
-ffmpeg -i -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 <output-file.mp3>
+ffmpeg -i \<input-file> -ss 00:00:35 -to 00:00:41 -c copy \<output-file>
 
 you need a new naming schema for generating the files via commands. Also when open an audacity project to edit files, don't make it called a filename, then they're all appended with 1, 2, 3 etc.
 
@@ -37,6 +37,12 @@ node http: https://nodejs.org/en/docs/guides/anatomy-of-an-http-transaction/
 download local file with node: https://stackoverflow.com/questions/7288814/download-a-file-from-nodejs-server-using-express
 
 routing in express js: http://expressjs.com/en/guide/routing.html
+
+node ffmpeg https://www.npmjs.com/package/ffmpeg
+
+actually i dunno about that one. Use this for trimming: https://www.npmjs.com/package/trimp3
+
+some cmd running options: https://stackoverflow.com/questions/20643470/execute-a-command-line-binary-with-node-js
 
 horizon youtube thing uses youtubetransfer.com which has a 20 min video max. Maybe then, we should download multiple mp3 files based off the times they choose in the video. Can a +20 min video be downloaded if a limit is specified. 
 
