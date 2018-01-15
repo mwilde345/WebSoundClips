@@ -15,15 +15,15 @@
   },
   "devDependencies": {},
   "homepage": "https://github.com/bbcrd/peaks.js",
-  "version": "0.9.5",
-  "_release": "0.9.5",
+  "version": "0.9.6",
+  "_release": "0.9.6",
   "_resolution": {
     "type": "version",
-    "tag": "v0.9.5",
-    "commit": "5ab3967a3253aa77190f05639f990a1025984705"
+    "tag": "v0.9.6",
+    "commit": "ef423be891f2f6ddd0e67b3b3b305c872dfee14c"
   },
   "_source": "https://github.com/bbcrd/peaks.js.git",
-  "_target": "^0.9.5",
+  "_target": "^0.9.6",
   "_originalSource": "peaks.js",
   "_direct": true
 }

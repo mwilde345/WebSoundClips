@@ -14,9 +14,11 @@ var peaksFunction = function (Peaks) {
     pointMarkerColor: '#006eb0',
     showPlayheadTime: true,
     waveformBuilderOptions: {
-        scale: 512,
-        //amplitude_scaaaale: 512
-    }
+      
+        //scale: 128,
+        //amplitude_scale: 1.0
+    },
+    zoomLevels: [128,256,512,1024,2048]
   };
 
   peaksInstance = Peaks.init(options);

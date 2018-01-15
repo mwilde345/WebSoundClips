@@ -13,8 +13,8 @@
 
   <!-- Latest compiled JavaScript -->
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-  <!-- <script src="node_modules/peaks.js/peaks.js"></script>  -->
   <script src="node_modules/peaks.js/peaks.js"></script>
+  <script src="node_modules/socket.io-client/dist/socket.io.js"></script>
 
 </head>
 
@@ -22,173 +22,186 @@
 
   <!-- Youtube Player Iframe and Logging buttons -->
   <!-- ######################################### -->
-
-  <div id="player" class='container'></div>
-  <div id="buttons" class="btn-group" role="group">
-    <button id="logBtn" onclick="logTime()" class="btn btn-info">Log Time</button>
-    <button id="undoBtn" onclick="undoTime()" class="btn btn-warning">Undo</button>
-    <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
-    <button id="downloadBtn" onclick="download()" class="btn btn-success">Download MP3</button>
-    <button id="trimBtn" onclick="trimPost()" class="btn btn-warning">Trim Clips</button>
-  </div>
-
-  <!-- Table to store video times -->
-  <!-- ########################## -->
-
-  <div id="output" class="container">
-    <div class="col-md-2" id="tableContainer">
-      <table id="table" class="table">
-        <thead>
-          <tr>
-            <th>Start</th>
-            <th>Stop</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Waveform container and controls-->
-  <!-- ############################## -->
-
-  <div id="first-waveform-visualiser-container"></div>
-  <div id="audioStuff" class="jumbotron">
-    <audio controls=controls src="" type="audio/mpeg">
-      Your browser does not support the audio element.
-    </audio>
-
-    <div id="controls">
-      <div>
-        <button data-action="zoom-in">Zoom in</button>
-        <button data-action="zoom-out">Zoom out</button>
-        <button data-action="add-segment">Add a Segment at current time</button>
-        <button data-action="log-data">Log segments</button>
+  <div id="main" class="container">
+    <div id="player"></div>
+      <br>
+      <div id="buttons" class="btn-group" role="group">
+        <button id="logBtn" onclick="logTime()" class="btn btn-info">Log Time</button>
+        <button id="undoBtn" onclick="undoTime()" class="btn btn-warning">Undo</button>
+        <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
+        <button id="downloadBtn" onclick="download()" class="btn btn-success">Download MP3</button>
+        <button id="trimBtn" onclick="trimPost()" class="btn btn-warning">Trim Clips</button>
       </div>
-      <div>
-        <input type="text" id="seek-time" value="0.0">
-        <button data-action="seek">Seek</button>
+      <br>
+      <div id="trimOutput" class="container"></div>
+      <br>
+
+      <!-- Table to store video times -->
+      <!-- ########################## -->
+
+      <div id="output" class="row">
+        <div id="tableContainer">
+          <table id="table" class="table">
+            <thead>
+              <tr>
+                <th>Start</th>
+                <th>Stop</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Waveform container and controls-->
+      <!-- ############################## -->
+
+      <div id="first-waveform-visualiser-container" class="row"></div>
+      <div id="audioStuff" class="jumbotron row">
+        <audio controls=controls src="" type="audio/mpeg">
+          Your browser does not support the audio element.
+        </audio>
+
+        <div id="controls">
+          <div>
+            <button data-action="zoom-in">Zoom in</button>
+            <button data-action="zoom-out">Zoom out</button>
+            <button data-action="add-segment">Add a Segment at current time</button>
+            <button data-action="log-data">Log segments</button>
+          </div>
+          <div>
+            <input type="text" id="seek-time" value="0.0">
+            <button data-action="seek">Seek</button>
+          </div>
+        </div>
+
+        <div class="log">
+          <div id="segments" class="hide">
+            <h2>Segments</h2>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Label</th>
+                  <th>Start time</th>
+                  <th>End time</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="log">
-      <div id="segments" class="hide">
-        <h2>Segments</h2>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Label</th>
-              <th>Start time</th>
-              <th>End time</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  <div id="trimOutput" class="container">
+    <!-- Other js functions -->
+    <!-- ################## -->
+    <script src="js/playerjs.js"></script>
+    <script src="js/peaksHelper.js"></script>
+    <script>
+      $("#audioStuff").hide();
+      var videoID = "";
+      var io = io.connect("http://localhost:3000");
+      io.on("download_progress", function (data) {
+        $("#trimOutput").append(data);
+      });
+      io.on("download_finished", function (data) {
+        //update progres bar to 100 if it isn't already there
+        videoID = data;
+        $("#downloadBtn").prop("disabled", false);
+        $("#audioStuff").show();
+        $("audio").prop("src", videoID + ".mp3");
+        peaksFunction(peaks);
+        addSegments();
+      });
 
-  </div>
-  <!-- Other js functions -->
-  <!-- ################## -->
-  <script src="js/playerjs.js"></script>
-  <script src="js/peaksHelper.js"></script>
-  <script>
-    $("#audioStuff").hide();
-    var videoID = "";
-    function download() {
-      $("#downloadBtn").prop("disabled", true);
-      if (peaksInstance != null) {
-        var r = confirm("Overwrite mp3 file?");
-        if (!r) return;
-        peaksInstance.destroy();
-      }
-      var data = {};
-      data.url = "https://www.youtube.com/watch?v=V_laNt7Sh6g";
-      //allow overwrite! also if you push the download button multiple times,
-      //we don't want multiple peaks made.
-      //also, don't load the <audio> element until after the conversion is completed.....
-      $.ajax({
-        type: "POST",
-        url: "/test",
-        data: JSON.stringify(data),
-        contentType: 'application/json',
-        success: function (data) {
-          var result = JSON.parse(data);
-          alert('download complete');
-          $("#downloadBtn").prop("disabled", false);
-          $("#audioStuff").show();
-          $("audio").prop("src",result.videoID+".mp3");
-          videoID = result.videoID;
-          //load <audio> tag with filename (so it gets the new file if overwritten)
-          peaksFunction(peaks);
-          addSegments();
+      function download() {
+        $("#downloadBtn").prop("disabled", true);
+        if (peaksInstance != null) {
+          var r = confirm("Overwrite mp3 file?");
+          if (!r) return;
+          peaksInstance.destroy();
+          $("#audioStuff").hide();
         }
-      });
-    }
-
-    function gatherTimes() {
-      var startTimes = [];
-      var stopTimes = [];
-      $("#table tr").each(function (index) {
-        if (index == 0) return true; //skip first row
-        var col1 = $($(this).children()[0]).text();
-        startTimes.push(parseFloat(col1));
-        var col2 = $($(this).children()[1]).text();
-        if (col2.length) stopTimes.push(parseFloat(col2));
-      });
-      if (startTimes.length > stopTimes.length) {
-        //TODO: this could be a problem if the +5 is greater than the max mp3 time...
-        stopTimes.push(startTimes[startTimes.length - 1] + 5.0);
-      }
-      return {
-        startTimes: startTimes,
-        stopTimes: stopTimes
-      };
-    }
-
-    function trimPost(){
-      var segments = peaksInstance.segments.getSegments();
-      segments.forEach(function(item, index){
         var data = {};
-        data.start = item.startTime.toFixed(1);
-        data.end = item.endTime.toFixed(1);
-        data.videoID = videoID;
-        $.ajax({
-          type: "POST",
-          url: "/trim",
-          data: JSON.stringify(data),
-          contentType: 'application/json',
-          success: function (data) {
-            $("#trimOutput").append(data);
+        data.url = "https://www.youtube.com/watch?v=V_laNt7Sh6g";
+        io.emit('download', data);
+        //allow overwrite! also if you push the download button multiple times,
+        //we don't want multiple peaks made.
+        //also, don't load the <audio> element until after the conversion is completed.....
+      }
+
+      function gatherTimes() {
+        var startTimes = [];
+        var stopTimes = [];
+        $("#table tr").each(function (index) {
+          if (index == 0) return true; //skip first row
+          var start = parseFloat($($(this).children()[0]).text());
+          var stop = $($(this).children()[1]).text();
+          startTimes.push(start);
+          if (stop.length){
+            stop = parseFloat(stop);
+            if(start==stop) stop=start+1
+            stopTimes.push(stop);
           }
         });
-      });
-      
-    }
+        if (startTimes.length > stopTimes.length) {
+          //TODO: this could be a problem if the +5 is greater than the max mp3 time...
+          stopTimes.push(startTimes[startTimes.length - 1] + 5.0);
+        }
+        return {
+          startTimes: startTimes,
+          stopTimes: stopTimes
+        };
+      }
 
-    function addSegments(){
-      peaksInstance.on('peaks.ready',function(){
-        var timeSegments = gatherTimes();
-        timeSegments.startTimes.forEach(function(item, index){
-          console.log(item);
-          console.log(index);
-          peaksInstance.segments.add({
-            startTime: timeSegments.startTimes[index],
-            endTime: timeSegments.stopTimes[index],
-            labelText: "Segment "+index,
-            editable: true
-          });
+      function trimPost() {
+        var segments = peaksInstance.segments.getSegments();
+
+        segments.forEach(function (item, index) {
+          var data = {};
+          data.start = item.startTime.toFixed(1);
+          data.end = item.endTime.toFixed(1);
+          data.videoID = videoID;
+          io.emit('trim', data);
+
+          // $.ajax({
+          //   type: "POST",
+          //   url: "/trim",
+          //   data: JSON.stringify(data),
+          //   contentType: 'application/json',
+          //   success: function (data) {
+          //     $("#trimOutput").append(data);
+          //   }
+          // });
         });
-        renderSegments(peaksInstance);
-      });
-    }
-  </script>
+        io.on('trim_done', function (data) {
+          $("#trimOutput").append(data);
+        });
+
+      }
+
+      function addSegments() {
+        //TODO: is this causing all the memory leaks....
+        peaksInstance.on('peaks.ready', function () {
+          var timeSegments = gatherTimes();
+          timeSegments.startTimes.forEach(function (item, index) {
+            console.log(item);
+            console.log(index);
+            peaksInstance.segments.add({
+              startTime: timeSegments.startTimes[index],
+              endTime: timeSegments.stopTimes[index],
+              labelText: "Segment " + index,
+              editable: true
+            });
+          });
+          renderSegments(peaksInstance);
+        });
+      }
+    </script>
 </body>
 
 </html>

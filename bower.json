@@ -15,6 +15,6 @@
     "tests"
   ],
   "dependencies": {
-    "peaks.js": "^0.9.5"
+    "peaks.js": "^0.9.6"
   }
 }
