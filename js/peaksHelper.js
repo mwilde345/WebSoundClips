@@ -22,7 +22,7 @@ var peaksFunction = function (Peaks) {
   };
 
   peaksInstance = Peaks.init(options);
-  
+
   renderSegments = function (peaks) {
     var segmentsContainer = document.getElementById('segments');
     var segments = peaks.segments.getSegments();
@@ -36,8 +36,10 @@ var peaksFunction = function (Peaks) {
         '<td>' + segment.labelText + '</td>' +
         '<td>' + segment.startTime.toFixed(1) + '</td>' +
         '<td>' + segment.endTime.toFixed(1) + '</td>' +
-        '<td>' + '<a href="#' + segment.id + '" data-action="play-segment" data-id="' + segment.id + '">Play</a>' + '</td>' +
-        '<td>' + '<a href="#' + segment.id + '" data-action="remove-segment" data-id="' + segment.id + '">Remove</a>' + '</td>' +
+        '<td>' + '<button onclick="playSegment(this)" class="btn" id="'+segment.id+'">Play</button></td>' +
+        '<td>' + '<button onclick="removeSegment(this)" class="btn" id="'+segment.id+'">Remove</button></td>' +
+        //'<td>' + '<a href="#' + segment.id + '" data-action="play-segment" data-id="' + segment.id + '">Play</a>' + '</td>' +
+        //'<td>' + '<a href="#' + segment.id + '" data-action="remove-segment" data-id="' + segment.id + '">Remove</a>' + '</td>' +
         '</tr>';
 
       html += row;
@@ -79,7 +81,7 @@ var peaksFunction = function (Peaks) {
       peaksInstance.player.seek(seconds);
     }
   });
-
+  
   document.querySelector('body').addEventListener('click', function (event) {
     var element = event.target;
     var action = element.getAttribute('data-action');
