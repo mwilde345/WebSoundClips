@@ -31,9 +31,22 @@
         <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
         <button id="downloadBtn" onclick="download()" class="btn btn-success">Download MP3</button>
         <button id="trimBtn" onclick="trimPost()" class="btn btn-warning">Trim Clips</button>
+        <button id="testClips" onclick="test()" class="btn">Test Clips</button>
+      </div>
+      <div id="trimOutput" class="container">
+        <table id="clipTable" class="table">
+          <thead>
+            <tr>
+              <th>Clip</th>
+              <th>Audio</th>
+              <th>Loudness (db)</th>
+            </tr>
+          </thead>
+          <tbody id="clipTable"></tbody>
+        </table>
       </div>
       <br>
-      <div id="trimOutput" class="container"></div>
+     
       <br>
 
       <!-- Table to store video times -->
@@ -114,9 +127,32 @@
         $("#downloadBtn").prop("disabled", false);
         $("#audioStuff").show();
         $("audio").prop("src", videoID + ".mp3");
-        peaksFunction(peaks);
-        addSegments();
+        peaksInit(peaks);
+        //addSegments(gatherTimes());
       });
+
+      function test(){
+        videoID = "V_laNt7Sh6g";
+        $("#audioStuff").show();
+        $("audio").prop("src", videoID + ".mp3");
+        var peaksInstance = peaksInit(peaks);
+        setupListeners(peaksInstance);
+        addSegments({
+          startTimes: [1.5, 6.8, 12.5],
+          stopTimes: [3.0, 9, 22]
+        },peaksInstance);
+      }
+
+      function playSegment(button){
+        var segmentID = $(button).attr("id");
+        var segment = peaksInstance.segments.getSegment(segmentID);
+        peaksInstance.player.playSegment(segment);
+      }
+
+      function removeSegment(button){
+        var segmentID = $(button).attr("id");
+        peaksInstance.segments.removeById(segmentID);
+      }
 
       function download() {
         $("#downloadBtn").prop("disabled", true);
@@ -179,18 +215,19 @@
           // });
         });
         io.on('trim_done', function (data) {
-          $("#trimOutput").append(data);
+          var rowString = "<tr><td>"+data.clipID+
+            "</td><td><audio src='"+data.clipID+".mp3'/></td>"+
+            "<td>"+data.loudness+"</td>"
+          $("#clipTable").append(data);
         });
 
       }
 
-      function addSegments() {
+      function addSegments(timeSegments, peaksInstance) {
         //TODO: is this causing all the memory leaks....
         peaksInstance.on('peaks.ready', function () {
-          var timeSegments = gatherTimes();
           timeSegments.startTimes.forEach(function (item, index) {
-            console.log(item);
-            console.log(index);
+            console.log("adding segment "+index);
             peaksInstance.segments.add({
               startTime: timeSegments.startTimes[index],
               endTime: timeSegments.stopTimes[index],
@@ -198,8 +235,9 @@
               editable: true
             });
           });
-          renderSegments(peaksInstance);
+          renderSegments(peaksInstance);  
         });
+        
       }
     </script>
 </body>
