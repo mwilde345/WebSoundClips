@@ -44,6 +44,10 @@ actually i dunno about that one. Use this for trimming: https://www.npmjs.com/pa
 
 some cmd running options: https://stackoverflow.com/questions/20643470/execute-a-command-line-binary-with-node-js
 
+################
+
+loudnorm needs two runs: https://superuser.com/questions/1281327/ffmpeg-loudnorm-filter-does-not-make-audio-louder
+
 horizon youtube thing uses youtubetransfer.com which has a 20 min video max. Maybe then, we should download multiple mp3 files based off the times they choose in the video. Can a +20 min video be downloaded if a limit is specified. 
 
 1. input youtube video url
