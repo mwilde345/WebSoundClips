@@ -1,15 +1,12 @@
-var myAudioContext = new AudioContext();
 var peaksInstance = null;
 var renderSegments = null;
-var peaksFunction = function (Peaks) {
+var peaksFunction = function (Peaks, videoID) {
   var options = {
     container: document.getElementById('first-waveform-visualiser-container'),
     mediaElement: document.querySelector('audio'),
-    audioContext: myAudioContext,
-    //   dataUri: {
-    //     arraybuffer: '/test_data/TOL_6min_720p_download.dat',
-    //     json: '/test_data/TOL_6min_720p_download.json'
-    //   },
+      dataUri: {
+        arraybuffer: 'videoDat/'+videoID+'.dat'
+      },
     keyboard: true,
     pointMarkerColor: '#006eb0',
     showPlayheadTime: true,
@@ -18,7 +15,7 @@ var peaksFunction = function (Peaks) {
         //scale: 128,
         //amplitude_scale: 1.0
     },
-    zoomLevels: [128,256,512,1024,2048]
+    zoomLevels: [256,512,1024,2048]
   };
 
   peaksInstance = Peaks.init(options);
@@ -36,8 +33,8 @@ var peaksFunction = function (Peaks) {
         '<td>' + segment.labelText + '</td>' +
         '<td>' + segment.startTime.toFixed(1) + '</td>' +
         '<td>' + segment.endTime.toFixed(1) + '</td>' +
-        '<td>' + '<button onclick="playSegment(this)" class="btn" id="'+segment.id+'">Play</button></td>' +
-        '<td>' + '<button onclick="removeSegment(this)" class="btn" id="'+segment.id+'">Remove</button></td>' +
+        '<td>' + '<button onclick="playSegment(this)" class="btn btn-success" id="'+segment.id+'">Play</button></td>' +
+        '<td>' + '<button onclick="removeSegment(this)" class="btn btn-danger" id="'+segment.id+'">Remove</button></td>' +
         //'<td>' + '<a href="#' + segment.id + '" data-action="play-segment" data-id="' + segment.id + '">Play</a>' + '</td>' +
         //'<td>' + '<a href="#' + segment.id + '" data-action="remove-segment" data-id="' + segment.id + '">Remove</a>' + '</td>' +
         '</tr>';
@@ -61,12 +58,14 @@ var peaksFunction = function (Peaks) {
   });
 
   document.querySelector('button[data-action="add-segment"]').addEventListener('click', function () {
+    var numSegments = peaksInstance.segments.getSegments().length;
     peaksInstance.segments.add({
       startTime: peaksInstance.player.getCurrentTime(),
       endTime: peaksInstance.player.getCurrentTime() + 10,
-      labelText: "Test segment",
+      labelText: "Segment "+numSegments,
       editable: true
     });
+    renderSegments(peaksInstance);
   });
 
   document.querySelector('button[data-action="log-data"]').addEventListener('click', function (event) {
@@ -81,20 +80,20 @@ var peaksFunction = function (Peaks) {
       peaksInstance.player.seek(seconds);
     }
   });
-  
-  document.querySelector('body').addEventListener('click', function (event) {
-    var element = event.target;
-    var action = element.getAttribute('data-action');
-    var id = element.getAttribute('data-id');
 
-    if (action === 'play-segment') {
-      var segment = peaksInstance.segments.getSegment(id);
-      peaksInstance.player.playSegment(segment);
-    } else if (action === 'remove-point') {
-      peaksInstance.points.removeById(id);
-    } else if (action === 'remove-segment') {
-      peaksInstance.segments.removeById(id);
-    }
-  });
+  // document.querySelector('body').addEventListener('click', function (event) {
+  //   var element = event.target;
+  //   var action = element.getAttribute('data-action');
+  //   var id = element.getAttribute('data-id');
+
+  //   if (action === 'play-segment') {
+  //     var segment = peaksInstance.segments.getSegment(id);
+  //     peaksInstance.player.playSegment(segment);
+  //   } else if (action === 'remove-point') {
+  //     peaksInstance.points.removeById(id);
+  //   } else if (action === 'remove-segment') {
+  //     peaksInstance.segments.removeById(id);
+  //   }
+  // });
 
 }//)(peaks);

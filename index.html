@@ -30,19 +30,22 @@
         <button id="undoBtn" onclick="undoTime()" class="btn btn-warning">Undo</button>
         <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
         <button id="downloadBtn" onclick="download()" class="btn btn-success">Download MP3</button>
-        <button id="trimBtn" onclick="trimPost()" class="btn btn-warning">Trim Clips</button>
+        <button id="trimBtn" onclick="trimClips()" class="btn btn-warning">Trim Clips</button>
         <button id="testClips" onclick="test()" class="btn">Test Clips</button>
+        <button id="compressClips" onclick="compress()" class="btn btn-warning">Compress</button>
+        <button id="s3upload" onclick="s3upload()" class="btn btn-success">S3 Upload</button>
       </div>
       <div id="trimOutput" class="container">
-        <table id="clipTable" class="table">
+        <table id="clipTable" class="table" onclick="tableClick(event)">
           <thead>
             <tr>
               <th>Clip</th>
               <th>Audio</th>
               <th>Loudness (db)</th>
+              <th>Retry</th>
             </tr>
           </thead>
-          <tbody id="clipTable"></tbody>
+          <tbody id="clipTableBody"></tbody>
         </table>
       </div>
       <br>
@@ -115,9 +118,10 @@
     <script src="js/playerjs.js"></script>
     <script src="js/peaksHelper.js"></script>
     <script>
-      $("#audioStuff").hide();
       var videoID = "";
       var io = io.connect("http://localhost:3000");
+      
+      $("#audioStuff").hide();
       io.on("download_progress", function (data) {
         $("#trimOutput").append(data);
       });
@@ -126,21 +130,77 @@
         videoID = data;
         $("#downloadBtn").prop("disabled", false);
         $("#audioStuff").show();
-        $("audio").prop("src", videoID + ".mp3");
-        peaksInit(peaks);
-        //addSegments(gatherTimes());
+        $("audio").prop("src", 'videoSound/'+videoID +".mp3");
+        peaksFunction(peaks, videoID);
+        addSegments(gatherTimes(),peaksInstance);
       });
+      io.on('trim_done', function (data) {
+        var clipID = data.clipID;
+        var loudness = data.loudness;
+        var rowString = "<tr><td>"+clipID+
+          "</td><td><audio controls=controls type='audio/mpeg' src='./loudClips/"+
+            clipID+loudness+".mp3' id='"+clipID+"_audio'/></td>"+
+          "<td id='"+clipID+"_loudness'>"+loudness+"</td>"+
+          "<td><input type='text' value='"+loudness+"' id='"+clipID+"_retry'></input>"+
+            "<button id='retryButton' name='"+clipID+"' class='btn btn-info'>Change Loudness</button></td></tr>";
+        //console.log(rowString);
+        $("#clipTableBody").append(rowString);
+      });
+
+      io.on('loudness_done', function(data){
+        var newLoudness = data.loudness;
+        var clipID = data.clipID;
+        var rowNum = data.tableRow;
+        //$("#clipTable tr:eq("+rowNum+") audio").attr("src",'');
+        $("#clipTable tr:eq("+rowNum+") audio").attr("src","./loudClips/"+clipID+newLoudness+".mp3");
+        //document.querySelector("#clipTable audio:nth-child("+rowNum+")").load()
+        //$("#clipTable tr:eq("+rowNum+") audio").load();
+        $("#clipTable tr:eq("+rowNum+") td:eq(2)").text(newLoudness);
+      });
+
+      io.on('compress_done', function(clipID){
+        console.log("Compressed "+clipID);
+      });
+
+      function compress(){
+        var clips = [];
+        $("#clipTable tr").each(function(index, item){
+          var clipID = $(item).find("td:eq(0)").text();
+          var loudness = $(item).find("td:eq(2)").text();
+          io.emit('compress',{clipID: clipID+loudness})
+        });
+      }
+
+      function s3upload(){
+        
+      }
+
+      function tableClick(event){
+        var element = event.target;
+        if($(element).attr("id")=="retryButton"){
+          var rowNum = $(element).closest("tr")[0].rowIndex;
+          var newLoudness = $("#clipTable tr:eq("+rowNum+") input").val();
+          var clipID = $(element).attr('name');
+          console.log(newLoudness);
+          console.log(clipID);
+          console.log(rowNum);
+          io.emit('loudness', {clipID: clipID, loudness: newLoudness, tableRow: rowNum});
+        }
+      }
 
       function test(){
         videoID = "V_laNt7Sh6g";
         $("#audioStuff").show();
-        $("audio").prop("src", videoID + ".mp3");
-        var peaksInstance = peaksInit(peaks);
-        setupListeners(peaksInstance);
+        $("audio").prop("src", "./videoSound/"+videoID+".mp3");
+        if (peaksInstance != null) {
+          peaksInstance.destroy();
+        }
+        peaksFunction(peaks, videoID);
         addSegments({
           startTimes: [1.5, 6.8, 12.5],
           stopTimes: [3.0, 9, 22]
         },peaksInstance);
+        
       }
 
       function playSegment(button){
@@ -152,6 +212,7 @@
       function removeSegment(button){
         var segmentID = $(button).attr("id");
         peaksInstance.segments.removeById(segmentID);
+        renderSegments(peaksInstance);
       }
 
       function download() {
@@ -194,33 +255,15 @@
         };
       }
 
-      function trimPost() {
+      function trimClips() {
         var segments = peaksInstance.segments.getSegments();
-
         segments.forEach(function (item, index) {
           var data = {};
           data.start = item.startTime.toFixed(1);
           data.end = item.endTime.toFixed(1);
           data.videoID = videoID;
           io.emit('trim', data);
-
-          // $.ajax({
-          //   type: "POST",
-          //   url: "/trim",
-          //   data: JSON.stringify(data),
-          //   contentType: 'application/json',
-          //   success: function (data) {
-          //     $("#trimOutput").append(data);
-          //   }
-          // });
         });
-        io.on('trim_done', function (data) {
-          var rowString = "<tr><td>"+data.clipID+
-            "</td><td><audio src='"+data.clipID+".mp3'/></td>"+
-            "<td>"+data.loudness+"</td>"
-          $("#clipTable").append(data);
-        });
-
       }
 
       function addSegments(timeSegments, peaksInstance) {
