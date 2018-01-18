@@ -50,6 +50,12 @@ loudnorm needs two runs: https://superuser.com/questions/1281327/ffmpeg-loudnorm
 
 horizon youtube thing uses youtubetransfer.com which has a 20 min video max. Maybe then, we should download multiple mp3 files based off the times they choose in the video. Can a +20 min video be downloaded if a limit is specified. 
 
+You will need to set up creds on the new server:
+https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/loading-node-credentials-shared.html
+[soundsofswanson]
+aws_access_key_id = AKIAJRSMEMQNQLHFDLXQ
+aws_secret_access_key = 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
+
 1. input youtube video url
 2. open iframe with video
 3. record starts and stops (save this data to a file?)
