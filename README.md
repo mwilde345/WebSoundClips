@@ -44,6 +44,9 @@ actually i dunno about that one. Use this for trimming: https://www.npmjs.com/pa
 
 some cmd running options: https://stackoverflow.com/questions/20643470/execute-a-command-line-binary-with-node-js
 
+use this for file upload: https://github.com/nkzawa/socket.io-stream
+and for file download: https://stackoverflow.com/questions/7288814/download-a-file-from-nodejs-server-using-express
+
 ################
 
 loudnorm needs two runs: https://superuser.com/questions/1281327/ffmpeg-loudnorm-filter-does-not-make-audio-louder
