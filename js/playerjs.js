@@ -1,5 +1,4 @@
 var tag = document.createElement('script');
-//https://www.youtube.com/watch?v=SrLZgP-OR6s
 tag.src = "https://www.youtube.com/iframe_api";
 var firstScriptTag = document.getElementsByTagName('script')[0];
 firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
@@ -13,7 +12,7 @@ function onYouTubeIframeAPIReady() {
     videoId: 'V_laNt7Sh6g',
     events: {
       'onReady': onPlayerReady,
-      'onStateChange': onPlayerStateChange
+      //'onStateChange': onPlayerStateChange
     },
     origin: "https://www.youtube.com"
   });
@@ -34,10 +33,9 @@ function onPlayerStateChange(event) {
 function stopVideo() {
   player.stopVideo();
 }
-var startPressed = false;
-var stopPressed = false;
 
-function logTime() {
+function logTime(timeValue = null) {
+  console.log("logging time");
   //add a link to each entry that moves the player to that time
   //check if time > .5 so we don't go negative
   if (stopPressed == false && startPressed == false) {
@@ -46,28 +44,29 @@ function logTime() {
   if (startPressed == true) {
     stopPressed = true;
     startPressed = false;
-    insertTime(true);
+    insertTime(true, timeValue);
     return;
   }
   if (stopPressed == true) {
     startPressed = true;
     stopPressed = false;
-    insertTime(false);
+    insertTime(false, timeValue);
     return;
   }
 }
 
-function insertTime(isStart) {
-  var currentTime = (player.getCurrentTime() - .8).toFixed(1);
+function insertTime(isStart, timeValue) {
+  console.log("inserting time: "+timeValue);
+  var currentTime = timeValue==null ? (player.getCurrentTime() - .8).toFixed(1) : timeValue;
   currentTime = currentTime < 0 ? 0 : currentTime;
   var insertString = isStart ? '<td><button onclick="seekTo(this)">' + currentTime + '</button></td>' :
     '<td><button onclick="seekTo(this)">' + currentTime + '</button></td>';
   $insertedItem = $(insertString);
   if (isStart) {
-    $("#tableBody").append("<tr></tr>");
-    $("#tableBody tr:last").append($insertedItem);
+    $("#timeTableBody").append("<tr></tr>");
+    $("#timeTableBody tr:last").append($insertedItem);
   } else {
-    $("#tableBody td:last").after($insertedItem);
+    $("#timeTableBody td:last").after($insertedItem);
   }
   $insertedItem.find("button").addClass("btn btn-info");
 }
@@ -75,13 +74,13 @@ function insertTime(isStart) {
 function resetTime() {
   startPressed = false;
   stopPressed = false;
-  $("#table tbody").empty();
+  $("#timeTableBody tr").remove();
 }
 
 function undoTime() {
   startPressed = !startPressed;
   stopPressed = !stopPressed;
-  $("#table td:last").remove();
+  $("#timeTable td:last").remove();
 }
 
 function seekTo(button) {

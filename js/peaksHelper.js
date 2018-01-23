@@ -71,6 +71,9 @@ var peaksFunction = function (Peaks, videoID) {
   document.querySelector('button[data-action="log-data"]').addEventListener('click', function (event) {
     renderSegments(peaksInstance);
   });
+  document.querySelector('button[data-action="save-segments"]').addEventListener('click', function (event) {
+    saveSegments(peaksInstance);
+  });
 
   document.querySelector('button[data-action="seek"]').addEventListener('click', function (event) {
     var time = document.getElementById('seek-time').value;

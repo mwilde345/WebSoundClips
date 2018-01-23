@@ -5,17 +5,17 @@
   <title>
     Sound Clips
   </title>
+  <meta charset="UTF-8">
   <!-- Latest compiled and minified CSS -->
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
 
   <!-- jQuery library -->
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="js/jquery-3.2.1.min.js"></script>
 
   <!-- Latest compiled JavaScript -->
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="bootstrap/js/bootstrap.min.js"></script>
   <script src="node_modules/peaks.js/peaks.js"></script>
   <script src="node_modules/socket.io-client/dist/socket.io.js"></script>
-
 </head>
 
 <body>
@@ -23,266 +23,206 @@
   <!-- Youtube Player Iframe and Logging buttons -->
   <!-- ######################################### -->
   <div id="main" class="container">
+
     <div id="player"></div>
-      <br>
-      <div id="buttons" class="btn-group" role="group">
-        <button id="logBtn" onclick="logTime()" class="btn btn-info">Log Time</button>
-        <button id="undoBtn" onclick="undoTime()" class="btn btn-warning">Undo</button>
-        <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
-        <button id="downloadBtn" onclick="download()" class="btn btn-success">Download MP3</button>
-        <button id="trimBtn" onclick="trimClips()" class="btn btn-warning">Trim Clips</button>
-        <button id="testClips" onclick="test()" class="btn">Test Clips</button>
-        <button id="compressClips" onclick="compress()" class="btn btn-warning">Compress</button>
-        <button id="s3upload" onclick="s3upload()" class="btn btn-success">S3 Upload</button>
+    </br>
+    </br>
+    <input type="text" class="form-control" id="videoID" placeholder="Paste Youtube Link" />
+    <button id="loadVideo" onclick="loadTheVideo()" class="btn btn-primary form-control">Load Video</button>
+    </br>
+    </br>
+    <div id="buttons" class="btn-group" role="group">
+        <a id="downloadLink" style="visibility: hidden;">download textFile</a>
+      <button id="logBtn" onclick="logTime()" class="btn btn-info">Log Time</button>
+      <button id="undoBtn" onclick="undoTime()" class="btn btn-warning">Undo</button>
+      <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
+      <button class="btn btn-primary" onclick="saveTimes()">Download Times</button>
+      <button id="testClips" onclick="test()" class="btn">Test Clips</button>
+    </div>
+    <br><br>
+
+    <!-- UPLOAD FILES -->
+    <div class="form-group col-sm-3">
+      <form id="videoTimes" action="upload" method="POST" enctype="multipart/form-data">
+        <label for="fileSelect">Select text file</label>
+        <input class="form-control-file" id="fileSelect" type="file" name="textFile">
+        <input class="form-control" type="submit" value="Upload Image">
+      </form>
+      <progress id="uploadProgress" value=0></progress>
+    </div>
+    
+    </br><br>
+    <!-- Table to store video times -->
+    <!-- ########################## -->
+
+    <div id="output" class="row">
+      <div id="tableContainer">
+        <table id="timeTable" class="table">
+          <thead>
+            <tr>
+              <th>Start</th>
+              <th>Stop</th>
+            </tr>
+          </thead>
+          <tbody id="timeTableBody">
+          </tbody>
+        </table>
       </div>
-      <div id="trimOutput" class="container">
+      <button id="downloadBtn" onclick="download()" class="btn btn-success">Download MP3</button>
+      <progress id="downloadProgress" max=100 value=0></progress>
+      
+    </div>
+
+    <!-- Waveform container and controls-->
+    <!-- ############################## -->
+    <div id="audioStuff" class="jumbotron row">
+      <div id="first-waveform-visualiser-container" class="row"></div>
+      <audio controls=controls src="" type="audio/mpeg">
+        Your browser does not support the audio element.
+      </audio>
+
+      <div id="controls">
+        <div>
+          <button class="btn btn-primary" data-action="zoom-in">Zoom in</button>
+          <button class="btn btn-primary" data-action="zoom-out">Zoom out</button>
+          <button class="btn btn-primary" data-action="add-segment">Add a Segment at current time</button>
+          <button class="btn btn-primary" data-action="log-data">Log segments</button>
+          <button class="btn btn-primary" data-action="save-segments">Save segments</button>
+        </div>
+        <div class="form-group col-sm-3">
+          <form id="segmentTimes" action="upload" method="POST" enctype="multipart/form-data">
+            <label for="fileSelect">Select text file</label>
+            <input class="form-control-file" id="fileSelect" type="file" name="textFile">
+            <input class="form-control" type="submit" value="Upload Image">
+          </form>
+          <progress id="uploadSegmentProgress" value=0></progress>
+        </div>
+        <div>
+          <input type="text" id="seek-time" value="0.0">
+          <button data-action="seek">Seek</button>
+        </div>
+      </div>
+
+      <div class="log">
+        <div id="segments" class="hide">
+          <h2>Segments</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Label</th>
+                <th>Start time</th>
+                <th>End time</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <button id="trimBtn" onclick="trimClips()" class="btn btn-warning">Trim Clips</button>
+      <div id="trimOutput" class="container" style="display: none">
         <table id="clipTable" class="table" onclick="tableClick(event)">
           <thead>
             <tr>
               <th>Clip</th>
               <th>Audio</th>
               <th>Loudness (db)</th>
-              <th>Retry</th>
+              <th>Change</th>
+              <th>First Five</th>
+              <th>Essential Words</th>
+              <th>Hints</th>
+              <th>Tags</th>
+              <th>Movie</th>
+              <th>Creator</th>
             </tr>
           </thead>
           <tbody id="clipTableBody"></tbody>
         </table>
       </div>
-      <br>
-     
-      <br>
-
-      <!-- Table to store video times -->
-      <!-- ########################## -->
-
-      <div id="output" class="row">
-        <div id="tableContainer">
-          <table id="table" class="table">
-            <thead>
-              <tr>
-                <th>Start</th>
-                <th>Stop</th>
-              </tr>
-            </thead>
-            <tbody id="tableBody">
-            </tbody>
-          </table>
-        </div>
+      <div id="compressClipsDiv" style="display: none">
+        <button id="checkFirstFive" onclick="checkFirstFive()" class="btn btn-info">Check First Five</button>
+        <button id="compressClips" onclick="compress()" class="btn btn-warning">Compress</button>
       </div>
-
-      <!-- Waveform container and controls-->
-      <!-- ############################## -->
-
-      <div id="first-waveform-visualiser-container" class="row"></div>
-      <div id="audioStuff" class="jumbotron row">
-        <audio controls=controls src="" type="audio/mpeg">
-          Your browser does not support the audio element.
-        </audio>
-
-        <div id="controls">
-          <div>
-            <button data-action="zoom-in">Zoom in</button>
-            <button data-action="zoom-out">Zoom out</button>
-            <button data-action="add-segment">Add a Segment at current time</button>
-            <button data-action="log-data">Log segments</button>
-          </div>
-          <div>
-            <input type="text" id="seek-time" value="0.0">
-            <button data-action="seek">Seek</button>
-          </div>
-        </div>
-
-        <div class="log">
-          <div id="segments" class="hide">
-            <h2>Segments</h2>
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Label</th>
-                  <th>Start time</th>
-                  <th>End time</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <br>
+      <div id="s3UploadDiv" style="display: none">
+        <input type="text" class="form-control" id="s3Bucket" placeholder="bucket name"/>
+        <button id="s3upload" onclick="s3upload()" class="btn btn-success">S3 Upload</button>
       </div>
     </div>
+  </div>
 
-    <!-- Other js functions -->
-    <!-- ################## -->
-    <script src="js/playerjs.js"></script>
-    <script src="js/peaksHelper.js"></script>
-    <script>
-      var videoID = "";
-      var io = io.connect("http://localhost:3000");
-      
-      $("#audioStuff").hide();
-      io.on("download_progress", function (data) {
-        $("#trimOutput").append(data);
-      });
-      io.on("download_finished", function (data) {
-        //update progres bar to 100 if it isn't already there
-        videoID = data;
-        $("#downloadBtn").prop("disabled", false);
-        $("#audioStuff").show();
-        $("audio").prop("src", 'videoSound/'+videoID +".mp3");
-        peaksFunction(peaks, videoID);
-        addSegments(gatherTimes(),peaksInstance);
-      });
-      io.on('trim_done', function (data) {
-        var clipID = data.clipID;
-        var loudness = data.loudness;
-        var rowString = "<tr><td>"+clipID+
-          "</td><td><audio controls=controls type='audio/mpeg' src='./loudClips/"+
-            clipID+loudness+".mp3' id='"+clipID+"_audio'/></td>"+
-          "<td id='"+clipID+"_loudness'>"+loudness+"</td>"+
-          "<td><input type='text' value='"+loudness+"' id='"+clipID+"_retry'></input>"+
-            "<button id='retryButton' name='"+clipID+"' class='btn btn-info'>Change Loudness</button></td></tr>";
-        //console.log(rowString);
-        $("#clipTableBody").append(rowString);
-      });
+  <!-- Other js functions -->
+  <!-- ################## -->
+  
+  <script>
+    var videoID = "V_laNt7Sh6g";
+    var compressedClips = [];
+    var io = io.connect("http://localhost:3000");
+    var startPressed = false;
+    var stopPressed = false;
+    $("#audioStuff").hide();
 
-      io.on('loudness_done', function(data){
-        var newLoudness = data.loudness;
-        var clipID = data.clipID;
-        var rowNum = data.tableRow;
-        //$("#clipTable tr:eq("+rowNum+") audio").attr("src",'');
-        $("#clipTable tr:eq("+rowNum+") audio").attr("src","./loudClips/"+clipID+newLoudness+".mp3");
-        //document.querySelector("#clipTable audio:nth-child("+rowNum+")").load()
-        //$("#clipTable tr:eq("+rowNum+") audio").load();
-        $("#clipTable tr:eq("+rowNum+") td:eq(2)").text(newLoudness);
-      });
+    io.on('checked_first_five', function(data){
+      console.log(data);
+    });
 
-      io.on('compress_done', function(clipID){
-        console.log("Compressed "+clipID);
-      });
+    io.on("download_progress", function (data) {
+      $("#downloadProgress").attr('value',data);
+      //$("#trimOutput").append(data);
+    });
+    io.on("download_finished", function (data) {
+      //update progres bar to 100 if it isn't already there
+      videoID = data;
+      $("#downloadBtn").prop("disabled", false);
+      $("#audioStuff").show();
+      $("audio").prop("src", 'videoSound/' + videoID + ".mp3");
+      peaksFunction(peaks, videoID);
+      addSegments(gatherTimes(), peaksInstance);
+    });
+    io.on('trim_done', function (data) {
+      var clipID = data.clipID;
+      var loudness = data.loudness;
+      var rowString = "<tr><td>" + clipID +
+        "</td><td><audio controls=controls type='audio/mpeg' src='./loudClips/" +
+        clipID + loudness + ".mp3' id='" + clipID + "_audio'/></td>" +
+        "<td id='" + clipID + "_loudness'>" + loudness + "</td>" +
+        "<td><input type='text' value='" + loudness + "' id='" + clipID + "_change'></input>" +
+        "<button id='changeButton' name='" + clipID + "' class='btn btn-info'>Change Loudness</button></td>"+
+        "<td><input type='text' id='firstFive' placeholder='First Five'/>"+
+        "<td><input type='text' id='essential' placeholder='Essential Words'/></td>"+
+        "<td><input type='text' id='hints' placeholder='Hints'/></td>"+
+        "<td><input type='text' id='tags' placeholder='Tags'/></td>"+
+        "<td><input type='text' id='movie' placeholder='Movie'/></td>"+
+        "<td><input type='text' id='creator' placeholder='Creator'/></td></tr>";
+        //add a call to dynamo and a flag if first five are the same
+      $("#clipTableBody").append(rowString);
+    });
 
-      function compress(){
-        var clips = [];
-        $("#clipTable tr").each(function(index, item){
-          var clipID = $(item).find("td:eq(0)").text();
-          var loudness = $(item).find("td:eq(2)").text();
-          io.emit('compress',{clipID: clipID+loudness})
-        });
-      }
+    io.on('loudness_done', function (data) {
+      var newLoudness = data.loudness;
+      var clipID = data.clipID;
+      var rowNum = data.tableRow;
+      //$("#clipTable tr:eq("+rowNum+") audio").attr("src",'');
+      $("#clipTable tr:eq(" + rowNum + ") audio").attr("src", "./loudClips/" + clipID + newLoudness + ".mp3");
+      //document.querySelector("#clipTable audio:nth-child("+rowNum+")").load()
+      //$("#clipTable tr:eq("+rowNum+") audio").load();
+      $("#clipTable tr:eq(" + rowNum + ") td:eq(2)").text(newLoudness);
+    });
 
-      function s3upload(){
-        
-      }
+    io.on('compress_done', function (clipID) {
+      console.log("Compressed " + clipID);
+    });
 
-      function tableClick(event){
-        var element = event.target;
-        if($(element).attr("id")=="retryButton"){
-          var rowNum = $(element).closest("tr")[0].rowIndex;
-          var newLoudness = $("#clipTable tr:eq("+rowNum+") input").val();
-          var clipID = $(element).attr('name');
-          console.log(newLoudness);
-          console.log(clipID);
-          console.log(rowNum);
-          io.emit('loudness', {clipID: clipID, loudness: newLoudness, tableRow: rowNum});
-        }
-      }
-
-      function test(){
-        videoID = "V_laNt7Sh6g";
-        $("#audioStuff").show();
-        $("audio").prop("src", "./videoSound/"+videoID+".mp3");
-        if (peaksInstance != null) {
-          peaksInstance.destroy();
-        }
-        peaksFunction(peaks, videoID);
-        addSegments({
-          startTimes: [1.5, 6.8, 12.5],
-          stopTimes: [3.0, 9, 22]
-        },peaksInstance);
-        
-      }
-
-      function playSegment(button){
-        var segmentID = $(button).attr("id");
-        var segment = peaksInstance.segments.getSegment(segmentID);
-        peaksInstance.player.playSegment(segment);
-      }
-
-      function removeSegment(button){
-        var segmentID = $(button).attr("id");
-        peaksInstance.segments.removeById(segmentID);
-        renderSegments(peaksInstance);
-      }
-
-      function download() {
-        $("#downloadBtn").prop("disabled", true);
-        if (peaksInstance != null) {
-          var r = confirm("Overwrite mp3 file?");
-          if (!r) return;
-          peaksInstance.destroy();
-          $("#audioStuff").hide();
-        }
-        var data = {};
-        data.url = "https://www.youtube.com/watch?v=V_laNt7Sh6g";
-        io.emit('download', data);
-        //allow overwrite! also if you push the download button multiple times,
-        //we don't want multiple peaks made.
-        //also, don't load the <audio> element until after the conversion is completed.....
-      }
-
-      function gatherTimes() {
-        var startTimes = [];
-        var stopTimes = [];
-        $("#table tr").each(function (index) {
-          if (index == 0) return true; //skip first row
-          var start = parseFloat($($(this).children()[0]).text());
-          var stop = $($(this).children()[1]).text();
-          startTimes.push(start);
-          if (stop.length){
-            stop = parseFloat(stop);
-            if(start==stop) stop=start+1
-            stopTimes.push(stop);
-          }
-        });
-        if (startTimes.length > stopTimes.length) {
-          //TODO: this could be a problem if the +5 is greater than the max mp3 time...
-          stopTimes.push(startTimes[startTimes.length - 1] + 5.0);
-        }
-        return {
-          startTimes: startTimes,
-          stopTimes: stopTimes
-        };
-      }
-
-      function trimClips() {
-        var segments = peaksInstance.segments.getSegments();
-        segments.forEach(function (item, index) {
-          var data = {};
-          data.start = item.startTime.toFixed(1);
-          data.end = item.endTime.toFixed(1);
-          data.videoID = videoID;
-          io.emit('trim', data);
-        });
-      }
-
-      function addSegments(timeSegments, peaksInstance) {
-        //TODO: is this causing all the memory leaks....
-        peaksInstance.on('peaks.ready', function () {
-          timeSegments.startTimes.forEach(function (item, index) {
-            console.log("adding segment "+index);
-            peaksInstance.segments.add({
-              startTime: timeSegments.startTimes[index],
-              endTime: timeSegments.stopTimes[index],
-              labelText: "Segment " + index,
-              editable: true
-            });
-          });
-          renderSegments(peaksInstance);  
-        });
-        
-      }
-    </script>
+    io.on('s3_upload_done', function (clipID) {
+      console.log("Uploaded " + clipID);
+    });
+  </script>
+  <script src="js/playerjs.js"></script>
+  <script src="js/peaksHelper.js"></script>
+  <script src="js/helpers.js"></script>
+  <script src="js/fileUpload.js"></script>
 </body>
 
 </html>

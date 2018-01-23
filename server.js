@@ -2,12 +2,24 @@ var express = require('express.io');
 var app = express();
 var bodyParser = require('body-parser');
 var horizon = require('horizon-youtube-mp3');
+var Busboy = require("busboy");
+//const fileUpload = require('express-fileupload');
 const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
+var AWS = require('aws-sdk');
+var credentials = new AWS.SharedIniFileCredentials({
+    profile: 'soundsofswanson'
+});
+AWS.config.credentials = credentials;
+var S3 = new AWS.S3();
+
+
 app.http().io()
-app.use(express.static(__dirname + '/'));
 app.use(bodyParser.json());
+app.use(express.static(__dirname + '/'));
+
+//app.use(fileUpload());
 app.listen('3000');
 
 //ffmpeg -y -i trimClips/V_laNt7Sh6g_12.5_22.0.mp3 -af loudnorm=I=-30:TP=-3:LRA=11:print_format=summary loudClips/V_laNt7Sh6g_12.5_22.0.mp3
@@ -34,101 +46,298 @@ app.listen('3000');
 }
 */
 //second pass: ffmpeg -y -i trimClips/V_laNt7Sh6g_12.5_22.0.mp3 -af loudnorm=I=-10:TP=-3:LRA=11:measured_I=-16.8:measured_TP=-2.0:measured_LRA=2.6:measured_thresh=-28.4:offset=4.38:print_format=summary:linear=true loudClips/V_laNt7Sh6g_12.5_22.0_2.mp3
+app.get('/download_times/:videoID', function(req,res){
+    var videoID = req.params.videoID;
+    console.log(req.params);
+    res.download('timesDownload/'+videoID+'.txt');
+});
+app.get('/download_segments/:videoID', function(req,res){
+    var videoID = req.params.videoID;
+    console.log(req.params);
+    res.download('segmentsDownload/'+videoID+'-segments.txt');
+});
 
-app.io.route('trim', function (req){
-    //don't let them trim on the client side unless there are actually segments in peaks.
+app.post('/save_segments', function(req, res){
+    //console.log(req);
+    var times = req.body.times;
+    if(!times){
+        res.send("No data to download");
+        return;
+    }
+    var output = JSON.stringify(times);
+    var fs = require('fs');
+    var filename = "segmentsDownload/"+req.body.videoID+"-segments.txt";
+    fs.writeFile(filename, output, function(err) {
+        if(err) {
+            return console.log(err);
+        }
+        res.send(filename);
+        //res.send("times downloaded");
+        //res.send("times have been downloaded");
+        console.log("The file was saved!");
+    });
+    //res.download(filename);   
+});
+
+app.post('/save_times', function(req, res){
+    //console.log(req);
+    var times = req.body.times;
+    if(!times){
+        res.send("No data to download");
+        return;
+    }
+    var output = "";
+    console.log('download times');
+    times.startTimes.forEach(function(item,index){
+        var endItem = times.stopTimes[index] ? times.stopTimes[index] : "";
+        output+= ''+item.length? item + " " + endItem+"\n" : '';
+    });
+    var fs = require('fs');
+    var filename = "timesDownload/"+req.body.videoID+".txt";
+    fs.writeFile(filename, output, function(err) {
+        if(err) {
+            return console.log(err);
+        }
+        res.send(filename);
+        //res.send("times downloaded");
+        //res.send("times have been downloaded");
+        console.log("The file was saved!");
+    });
+    //res.download(filename);   
+});
+
+app.post('/upload', function (req, res) {
+    //console.log(req.files.textFile);
+    console.log(req.headers);
+    var loadFile = "";
+    var busboy = new Busboy({
+        headers: req.headers,
+        limits: {
+            fileSize: 3 * 1024 * 1024
+        }
+    });
+    busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
+        var saveTo = path.join('uploads', filename);
+        loadFile = filename;
+        console.log('Uploading: ' + saveTo);
+        file.on('limit', function () {
+            console.log('file size limit reached');
+            res.send('File size cannot exceed 3MB')
+        })
+        file.pipe(fs.createWriteStream(saveTo));
+    });
+    busboy.on('finish', function () {
+        console.log('Upload complete');
+        console.log(loadFile);
+        var startTimes = [];
+        var endTimes = [];
+        readFile(loadFile, function (data) {
+            var lines = data.split(/\r?\n/);
+            console.log(lines);
+            lines.forEach(function(item, index){
+                console.log(item);
+                var lineData = item.split(/ |,|\t/);
+                console.log(lineData);
+                startTimes.push(lineData[0]);
+                if(lineData.length>1&&lineData[1].length){
+                    endTimes.push(lineData[1]);
+                }
+            });
+            res.send(JSON.stringify({start: startTimes, end: endTimes}));
+        })
+
+    });
+    req.pipe(busboy);
+});
+
+app.post('/upload_segments', function (req, res) {
+    //console.log(req.files.textFile);
+    //console.log(req.headers);
+    var loadFile = "";
+    var busboy = new Busboy({
+        headers: req.headers,
+        limits: {
+            fileSize: 3 * 1024 * 1024
+        }
+    });
+    busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
+        var saveTo = path.join('uploads', filename);
+        loadFile = filename;
+        console.log('Uploading: ' + saveTo);
+        file.on('limit', function () {
+            console.log('file size limit reached');
+            res.send('File size cannot exceed 3MB')
+        })
+        file.pipe(fs.createWriteStream(saveTo));
+    });
+    busboy.on('finish', function () {
+        console.log('Upload complete');
+        console.log(loadFile);
+        var startTimes = [];
+        var endTimes = [];
+        readFile(loadFile, function (data) {
+            res.send(JSON.stringify(data));
+        })
+
+    });
+    req.pipe(busboy);
+});
+
+function readFile(filename, callback) {
+    var fs = require('fs');
+    fs.readFile("uploads/"+filename, 'utf8', function (err, data) {
+        if (err) throw err;
+        console.log('OK: ' + filename);
+        callback(data);
+    });
+}
+
+app.io.route('checkFirstFive', function(req){
+    var firstFives = req.data;
+    console.log(firstFives);
+    req.io.emit("checked_first_five","checked em");
+    //dynamo_call(firstFives);
+/*
+return:
+    [
+        {row: 0, valid: False, relatedClip: clipID, relatedUrl: s3link},
+    ]
+*/
+})
+
+app.io.route('trim', function (req) {
     var input = req.data;
     var start = input.start;
     var end = input.end;
     var videoID = input.videoID;
-    var clipID = videoID+"_"+start+"_"+end;
-    var data = {start: start, end: end, videoID: videoID, clipID: clipID};
-    trimClip(data, function(){
-        //default clip to -14 loudness
-        setLoudness(clipID, -14, function(){
-            req.io.emit("trim_done",{clipID: clipID, loudness: -14});
+    var clipID = videoID + "_" + start + "_" + end;
+    var data = {
+        start: start,
+        end: end,
+        videoID: videoID,
+        clipID: clipID
+    };
+    trimClip(data, function () {
+        //default clip to -13 loudness
+        setLoudness(clipID, -13, function () {
+            req.io.emit("trim_done", {
+                clipID: clipID,
+                loudness: -13
+            });
         });
-        
+
     });
 });
 
-function setLoudness(clipID, loudness, callback){
+function setLoudness(clipID, loudness, callback) {
     console.log(clipID);
-    var child = cp.exec('ffmpeg -y -i ./trimClips/'+clipID+'.mp3 -af loudnorm=I='+loudness+
-        ':TP=-3:LRA=11:print_format=json -f null -');
-    
+    var command = 'ffmpeg -y -i ./trimClips/' + clipID + '.mp3 -af loudnorm=I=' + loudness +
+    ':TP=-3:LRA=11:print_format=json -f null -'
+    console.log("running: "+command);
+    var child = cp.exec(command);
+
     var output, I, TP, LRA, thresh, offset;
-    child.stdout.on('data',function(data){
-        output+=data;
+    child.stdout.on('data', function (data) {
+        output += data;
     });
-    child.stderr.on('data', function(data) {
-        output+=data;
+    child.stderr.on('data', function (data) {
+        output += data;
     });
-    child.on('exit', function(code) {
+    child.on('exit', function (code) {
+        console.log(output);
+        //TODO: what if the command fails
         var json = JSON.parse(output.match(/{(.|\n)*}/)[0]);
         I = json.input_i;
         TP = json.input_tp;
         LRA = json.input_lra;
         thresh = json.input_thresh;
         offset = json.target_offset;
-        var cmdString = 'ffmpeg -y -i trimClips/'+clipID+'.mp3 -af '+
-        'loudnorm=I='+loudness+':TP=-3:LRA=11:measured_I='+I+':measured_TP='+TP+':'+
-        'measured_LRA='+LRA+':measured_thresh='+thresh+':offset='+offset+':print_format=summary:'+
-        'linear=true loudClips/'+clipID+loudness+'.mp3';
+        var cmdString = 'ffmpeg -y -i trimClips/' + clipID + '.mp3 -af ' +
+            'loudnorm=I=' + loudness + ':TP=-3:LRA=11:measured_I=' + I + ':measured_TP=' + TP + ':' +
+            'measured_LRA=' + LRA + ':measured_thresh=' + thresh + ':offset=' + offset + ':print_format=summary:' +
+            'linear=true loudClips/' + clipID + loudness + '.mp3';
         console.log(cmdString);
-        var child2 = cp.spawn(cmdString,{shell:true});
-        child2.on('exit', function(code){
+        var child2 = cp.spawn(cmdString, {
+            shell: true
+        });
+        child2.on('exit', function (code) {
 
             callback();
         });
     });
 }
 
-app.io.route('loudness', function(req){
+app.io.route('loudness', function (req) {
     console.log(req.data);
     var clipID = req.data.clipID;
     var loudness = req.data.loudness;
     var tableRow = req.data.tableRow;
-    if(loudness< -70){
-        loudness=-70;
+    if (loudness < -70) {
+        loudness = -70;
     }
-    if(loudness> -5){
-        loudness= -5;
+    if (loudness > -5) {
+        loudness = -5;
     }
-    setLoudness(clipID, loudness, function(){
-        req.io.emit("loudness_done",{clipID: clipID, loudness: loudness, tableRow: tableRow});
+    setLoudness(clipID, loudness, function () {
+        req.io.emit("loudness_done", {
+            clipID: clipID,
+            loudness: loudness,
+            tableRow: tableRow
+        });
     });
 });
 
-app.io.route('compress', function(req){
+app.io.route('compress', function (req) {
     var clipID = req.data.clipID;
-    cp.exec('ffmpeg -y -i ./loudClips/'+clipID+'.mp3'+
-        ' -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 ./compressedClips/'+clipID+'.mp3',
+    cp.exec('ffmpeg -y -i ./loudClips/' + clipID + '.mp3' +
+        ' -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 ./compressedClips/' + clipID + '.mp3',
         (err, stdout, stderr) => {
-            if(err){
+            if (err) {
                 console.log(err);
                 return;
             }
-            req.io.emit('compress_done',clipID);
+            req.io.emit('compress_done', clipID);
         });
 });
 
-app.io.route('s3_upload', function(req){
-    var videoID = req.data.videoID;
-    //upload to s3
-   dumpClips(videoID, function(){
+app.io.route('s3_upload', function (req) {
+    var clipID = req.data.clipID;
+    var fileBuffer = fs.readFileSync('compressedCLips/' + clipID + ".mp3");
+    S3.putObject({
+            ACL: 'public-read',
+            Bucket: 'soundsofswanson',
+            Key: clipID + '.mp3',
+            Body: fileBuffer,
+            ContentType: 'audio/mpeg'
+        },
+        function (error, response) {
+            if (error) {
+                console.log("failed uploading " + clipID + " with error: " + error);
+                return;
+            } else {
+                req.io.emit("s3_upload_done", clipID);
+            }
+        }
+    );
 
-   }); 
 });
 
-function dumpClips(videoID, callback){
-    var dirs = ['videoSound','videoDat','trimClips','loudClips','compressedClips'];
-    dirs.forEach(function(dir, index){
-        fs.readdir(dir, function(err, files){
-            if(err) throw err;
-            for(const file of files){
-                fs.unlink(path.join(dir, file), err=>{
-                    if(err) throw err;
+app.io.route('dump_clips', function (req) {
+    var videoID = req.data.videoID;
+    //upload to s3
+    dumpClips(videoID, function () {
+
+    });
+});
+
+function dumpClips(videoID, callback) {
+    var dirs = ['videoSound', 'videoDat', 'trimClips', 'loudClips', 'compressedClips'];
+    dirs.forEach(function (dir, index) {
+        fs.readdir(dir, function (err, files) {
+            if (err) throw err;
+            for (const file of files) {
+                fs.unlink(path.join(dir, file), err => {
+                    if (err) throw err;
                 })
             }
         });
@@ -136,9 +345,9 @@ function dumpClips(videoID, callback){
     callback();
 }
 
-function trimClip(data, callback){
-    cp.exec('ffmpeg -y -i ./videoSound/'+data.videoID+'.mp3 -ss '+data.start+' -to '+data.end+' -c copy ./trimClips/'
-        +data.clipID+'.mp3', 
+function trimClip(data, callback) {
+    cp.exec('ffmpeg -y -i ./videoSound/' + data.videoID + '.mp3 -ss ' + data.start + ' -to ' + data.end + ' -c copy ./trimClips/' +
+        data.clipID + '.mp3',
         (err, stdout, stderr) => {
             if (err) {
                 // node couldn't execute the command
@@ -159,22 +368,22 @@ app.io.route('download', function (req) {
     //     res.send(data);
     // });
     var url = req.data.url;
-    var videoID = url.replace(/(.*)(=)(.*)/,"$3");
+    var videoID = url.replace(/(.*)(=)(.*)/, "$3");
     horizon.downloadToLocal(
         url,
         './videoSound/',
-        videoID+'.mp3',
-        null,//{start:'01:10', end:'01:20'},
+        videoID + '.mp3',
+        null, //{start:'01:10', end:'01:20'},
         null,
         function (err, result) {
             //the result is the mp3 file. send it to the waveform generator
             //console.log(result);
             //res.send(result);
             if (result === horizon.successType.CONVERSION_FILE_COMPLETE) {
-                generateWaveform(req,videoID, function(){
-                    req.io.emit('download_finished',videoID);
+                generateWaveform(req, videoID, function () {
+                    req.io.emit('download_finished', videoID);
                 });
-                
+
                 //console.log(result);
                 //res.send(JSON.stringify({videoID: videoID}));
                 //res.send('finished');
@@ -184,7 +393,7 @@ app.io.route('download', function (req) {
         //make a progress bar.
         function onConvertVideoProgress(percent, timemark, targetSize) {
             //res.write(''+percent);
-            req.io.emit('download_progress',percent.toFixed(0));
+            req.io.emit('download_progress', percent.toFixed(0));
             //console.log('Progress:', percent, 'Timemark:', timemark, 'Target Size:', targetSize);
             // Will return...
             // Progress: 90.45518257038955 Timemark: 00:02:20.04 Target Size: 2189
@@ -194,8 +403,8 @@ app.io.route('download', function (req) {
     );
 });
 
-function generateWaveform(req, videoID, callback){
-    cp.exec('audiowaveform -i ./videoSound/'+videoID+'.mp3 -o ./videoDat/'+videoID+'.dat -b 8', 
+function generateWaveform(req, videoID, callback) {
+    cp.exec('audiowaveform -i ./videoSound/' + videoID + '.mp3 -o ./videoDat/' + videoID + '.dat -b 8',
         (err, stdout, stderr) => {
             if (err) {
                 // node couldn't execute the command
