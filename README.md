@@ -61,6 +61,8 @@ aws_secret_access_key = amv+RyWzycfFw2F2gMvXmpwhI8aSOagv45ELjIXe
 
 for quotes and trivia, add entry in videosTable. one video may have multiple movies and creators. so that's not needed in the videos table.
 
+jquery popup: http://dev.vast.com/jquery-popup-overlay/
+
 1. input youtube video url
 2. open iframe with video
 3. record starts and stops (save this data to a file?)

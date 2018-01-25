@@ -27,12 +27,12 @@
     <div id="player"></div>
     </br>
     </br>
-    <input type="text" class="form-control" id="videoID" placeholder="Paste Youtube Link" />
+    <input value="" type="text" class="form-control" id="videoID" placeholder="Paste Youtube Link" />
     <button id="loadVideo" onclick="loadTheVideo()" class="btn btn-primary form-control">Load Video</button>
     </br>
     </br>
     <div id="buttons" class="btn-group" role="group">
-        <a id="downloadLink" style="visibility: hidden;">download textFile</a>
+      <a id="downloadLink" style="visibility: hidden;">download textFile</a>
       <button id="logBtn" onclick="logTime()" class="btn btn-info">Log Time</button>
       <button id="undoBtn" onclick="undoTime()" class="btn btn-warning">Undo</button>
       <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
@@ -45,7 +45,7 @@
     <div class="form-group col-sm-3">
       <form id="videoTimes" action="upload" method="POST" enctype="multipart/form-data">
         <label for="fileSelect">Select text file</label>
-        <input class="form-control-file" id="fileSelect" type="file" name="textFile">
+        <input value="" class="form-control-file" id="fileSelect" type="file" name="textFile">
         <input class="form-control" type="submit" value="Upload Image">
       </form>
       <progress id="uploadProgress" value=0></progress>
@@ -122,7 +122,13 @@
         </div>
       </div>
       <button id="trimBtn" onclick="trimClips()" class="btn btn-warning">Trim Clips</button>
+      <progress value=0 id="trimProgress"></progress>
       <div id="trimOutput" class="container" style="display: none">
+        <input value="" type='text' id='masterMovie' placeholder="Movie Title"/>
+        <input value="" type='text' id='masterCreator' placeholder="Creator"/>
+        <input value="" type='text' id='masterTags' placeholder="Tag1, tag2"/>
+        <input value="" type='text' id='masterHints' placeholder="Hint1, hint2"/>
+        <button class="btn btn-info" onclick="setAllDescriptors()">Apply To All</button>
         <table id="clipTable" class="table" onclick="tableClick(event)">
           <thead>
             <tr>
@@ -144,10 +150,11 @@
       <div id="compressClipsDiv" style="display: none">
         <button id="checkFirstFive" onclick="checkFirstFive()" class="btn btn-info">Check First Five</button>
         <button id="compressClips" onclick="compress()" class="btn btn-warning">Compress</button>
+        <button onclick="testDynamo()" class="btn btn-large btn-primary">Test Dynamo</button>
       </div>
       <br>
       <div id="s3UploadDiv" style="display: none">
-        <input type="text" class="form-control" id="s3Bucket" placeholder="bucket name"/>
+        <input value="" type="text" class="form-control" id="s3Bucket" placeholder="bucket name"/>
         <button id="s3upload" onclick="s3upload()" class="btn btn-success">S3 Upload</button>
       </div>
     </div>
@@ -163,6 +170,10 @@
     var startPressed = false;
     var stopPressed = false;
     $("#audioStuff").hide();
+
+    io.on('dynamo_test_done', function(data){
+      console.log(data);
+    });
 
     io.on('checked_first_five', function(data){
       console.log(data);
@@ -190,14 +201,23 @@
         "<td id='" + clipID + "_loudness'>" + loudness + "</td>" +
         "<td><input type='text' value='" + loudness + "' id='" + clipID + "_change'></input>" +
         "<button id='changeButton' name='" + clipID + "' class='btn btn-info'>Change Loudness</button></td>"+
-        "<td><input type='text' id='firstFive' placeholder='First Five'/>"+
-        "<td><input type='text' id='essential' placeholder='Essential Words'/></td>"+
-        "<td><input type='text' id='hints' placeholder='Hints'/></td>"+
-        "<td><input type='text' id='tags' placeholder='Tags'/></td>"+
-        "<td><input type='text' id='movie' placeholder='Movie'/></td>"+
-        "<td><input type='text' id='creator' placeholder='Creator'/></td></tr>";
+        "<td><input value='' type='text' id='firstFive' placeholder='First Five'/>"+
+        "<button id='viewConflicts' class='btn btn-primary'><span class='glyphicon glyphicon-search'/></button>"+
+        "<button id='approve' class='btn btn-success'><span class='glyphicon glyphicon-ok'/></button>"+
+        "<button id='deny' class='btn btn-danger'><span class='glyphicon glyphicon-remove'/></button>"+
+        "<td><input value='' type='text' id='essential' placeholder='Essential Words'/></td>"+
+        "<td><input value='' type='text' id='hints' placeholder='Hints'/></td>"+
+        "<td><input value='' type='text' id='tags' placeholder='Tags'/></td>"+
+        "<td><input value='' type='text' id='movie' placeholder='Movie'/></td>"+
+        "<td><input value='' type='text' id='creator' placeholder='Creator'/></td></tr>";
         //add a call to dynamo and a flag if first five are the same
       $("#clipTableBody").append(rowString);
+      $("#trimProgress").val($("#clipTable audio").length);
+      if($("#clipTable audio").length==peaksInstance.segments.getSegments().length){
+        $("#trimOutput").show();
+        $("#compressClipsDiv").show();
+        $("#trimBtn").attr("disabled", false);
+      }
     });
 
     io.on('loudness_done', function (data) {

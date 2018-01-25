@@ -9,9 +9,10 @@ const fs = require('fs');
 const path = require('path');
 var AWS = require('aws-sdk');
 var credentials = new AWS.SharedIniFileCredentials({
-    profile: 'soundsofswanson'
+    profile: 'mwildeadmin'
 });
 AWS.config.credentials = credentials;
+AWS.config.region = 'us-east-1';
 var S3 = new AWS.S3();
 
 
@@ -46,6 +47,47 @@ app.listen('3000');
 }
 */
 //second pass: ffmpeg -y -i trimClips/V_laNt7Sh6g_12.5_22.0.mp3 -af loudnorm=I=-10:TP=-3:LRA=11:measured_I=-16.8:measured_TP=-2.0:measured_LRA=2.6:measured_thresh=-28.4:offset=4.38:print_format=summary:linear=true loudClips/V_laNt7Sh6g_12.5_22.0_2.mp3
+
+app.io.route('dynamo_test', function(req){
+    var dynamo = new AWS.DynamoDB();
+    var params = {
+        ExpressionAttributeValues: {
+            ':c':{S: 'test_clipID'},
+            //':f':{S: 'first five'},
+            ':b':{S: 'bucket_name'}
+        },
+        KeyConditionExpression: 's3bucket = :b',
+        FilterExpression: /*'contains(firstFive,:f) and */'contains(clipID, :c)',
+        IndexName: 's3bucket-index',
+        ProjectionExpression: 'clipID, firstFive, s3bucket',
+        TableName: 'quotes'
+    };
+    console.log("calling dynamo");
+    dynamo.query(params, function(err, data){
+        if(err){
+            console.log("Error", err);
+        }else{
+            console.log(data.Items);
+            req.io.emit("dynamo_test_done",data.Items);
+        }
+    })
+    
+})
+
+app.io.route('checkFirstFive', function(req){
+    var firstFives = req.data;
+    console.log(firstFives);
+    
+    req.io.emit("checked_first_five","checked em");
+    //dynamo_call(firstFives);
+/*
+return:
+    [
+        {row: 0, valid: False, relatedClip: clipID, relatedUrl: s3link},
+    ]
+*/
+})
+
 app.get('/download_times/:videoID', function(req,res){
     var videoID = req.params.videoID;
     console.log(req.params);
@@ -192,18 +234,7 @@ function readFile(filename, callback) {
     });
 }
 
-app.io.route('checkFirstFive', function(req){
-    var firstFives = req.data;
-    console.log(firstFives);
-    req.io.emit("checked_first_five","checked em");
-    //dynamo_call(firstFives);
-/*
-return:
-    [
-        {row: 0, valid: False, relatedClip: clipID, relatedUrl: s3link},
-    ]
-*/
-})
+
 
 app.io.route('trim', function (req) {
     var input = req.data;
