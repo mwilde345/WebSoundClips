@@ -6,6 +6,12 @@
 //triviaClips: clipID, movieTitle, creator, essentialWords, firstFive, hints, tags, s3bucket
 //quotes: clipID, firstFive, s3bucket
 //
+//load video, check if video exists in videosTable
+//if so, list clipIDs
+//if not, insert new video entry with empty clips (or set a flag to do that later once 
+//i have all the clips)
+
+//
 
 function testDynamo(){
     io.emit('dynamo_test');
@@ -15,6 +21,32 @@ function checkVideoID(videoID){
     //select from videoTable where videoID = videoID
     //if videoID already exists, getAllClips()
     //if not, post<Quotes|Trivia>
+    io.emit("check_video_id",videoID);
+}
+
+io.on("checked_video_id",function(data){
+    console.log(data);
+    if(!data.length){
+        postVideo(videoID, []);
+    }else{
+        displayClips(data[0]);
+    }
+    //if not null then getAllClips else
+    //postVideo(videoID,[])
+});
+
+function displayClips(videoObject){
+    var videoID = videoObject.videoID;
+    var clips = videoObject.clipIDs.L;
+    console.log("Video found! Clips: ");
+    if(!clips.length) {
+        console.log("no clips yet");
+        return;
+    }else{
+        clips.L.forEach(function(item,index){
+            console.log(item);
+        });
+    }
 }
 
 function getAllClips(videoID){
@@ -22,17 +54,63 @@ function getAllClips(videoID){
     //loop through clips and getClip(clipID)
 }
 
-function postQuotes(){
+function postClips(){
+    var clips = [];
+
+    $("#clipTableBody tr").each(function(index, item){
+        var rowData = $(item).find("td");
+        var clipData = {
+            clipID: $($(rowData).find('#clipAudio')).attr('src').match(/(.*\/)(.*)(\.mp3.*)/)[2],
+            firstFive: $($(rowData).find("#firstFive")).val(),
+            essential: $($(rowData).find("#essential")).val(),
+            hints: $($(rowData).find("#hints")).val(),
+            tags: $($(rowData).find("#tags")).val(),
+            movie: $($(rowData).find("#movie")).val(),
+            creator: $($(rowData).find("#creator")).val(),
+            s3bucket: s3bucket
+        }
+        if(skillOption=="quotes"){
+            clipData = {
+                clipID: clipData.clipID,
+                firstFive: clipData.firstFive,
+                s3bucket: s3bucket
+            }
+        }
+        clips.push(clipData);
+    })
+    console.log(clips);
+}
+
+function postQuotes(clipData){
     //post to quotes
+    io.emit("post_quotes", clipData);
+    postVideos(videoID, clips);
     //post to videosTable
     //put it in the specified s3bucket
 }
 
-function postTrivia(){
+io.on("posted_quotes", function(data){
+    console.log(data);
+});
+
+function postTrivia(clipData){
     //post to triviaClips
+    io.emit("post_trivia", clipData);
     //post to videosTable
     //put it in specified s3bucket
 }
+
+io.on("posted_trivia", function(data){
+    console.log(data);
+});
+
+function postVideo(videoID, clips){
+    io.emit("post_video",{videoID: videoID, clips: clips});
+}
+
+io.on("posted_video", function(data){
+    console.log(data);
+});
 
 function checkFive(s3bucket, fiveWords){
     //set a flag for the first check
@@ -119,6 +197,8 @@ function saveTimes(){
 }
 
 function loadTheVideo() {
+    
+    //$("#chooseBucketDiv").hide();
     //https://www.youtube.com/watch?v=SrLZgP-OR6s
     var input = $("#videoID").val().length ? $("#videoID").val().match(/(.*)(=)(.*)/) : [];
     if(input.length==0){
@@ -130,6 +210,8 @@ function loadTheVideo() {
         //call dynamodb and search for duplicate videoID
         console.log(videoID);
         player.loadVideoById(videoID);
+        $("#chooseBucketDiv").show();
+        checkVideoID(videoID);
     }
 }
 
@@ -197,6 +279,7 @@ function setAllDescriptors(){
     var masterCreator = $("#masterCreator").val();
     var masterHints = $("#masterHints").val();
     var masterTags = $("#masterTags").val();
+    var masterEssential = $("#masterEssential").val();
     $("#clipTable tr #movie").each(function(index, item){
         $(item).val(masterMovie);
     });
@@ -208,6 +291,9 @@ function setAllDescriptors(){
     });
     $("#clipTable tr #tags").each(function(index, item){
         $(item).val(masterTags);
+    });
+    $("#clipTable tr #essential").each(function(index, item){
+        $(item).val(masterEssential);
     });
 }
 
@@ -233,6 +319,7 @@ function download() {
         if (!r) return;
         peaksInstance.destroy();
         $("#audioStuff").hide();
+        $("#clipTable tr").slice(1).remove();
     }
     var data = {};
     data.url = "https://www.youtube.com/watch?v="+videoID;
@@ -303,6 +390,7 @@ function test() {
     videoID = "V_laNt7Sh6g";
     $("#audioStuff").show();
     $("audio").prop("src", "./videoSound/" + videoID + ".mp3");
+    $("#clipTable tr").slice(1).remove();
     if (peaksInstance != null) {
         peaksInstance.destroy();
     }
@@ -318,8 +406,8 @@ function test() {
         var loudness = -13;
         var rowString = "<tr><td>" + clipID +
         "</td><td><audio controls=controls type='audio/mpeg' src='./loudClips/" +
-        clipID + loudness + ".mp3' id='" + clipID + "_audio'/></td>" +
-        "<td id='" + clipID + "_loudness'>" + loudness + "</td>" +
+        clipID + loudness + ".mp3' id='clipAudio'/></td>" +
+        "<td id='clipLoudness'>" + loudness + "</td>" +
         "<td><input type='text' value='" + loudness + "' id='" + clipID + "_change'></input>" +
         "<button id='changeButton' name='" + clipID + "' class='btn btn-info'>Change Loudness</button></td>"+
         "<td><input value='' type='text' id='firstFive' placeholder='First Five'/>"+

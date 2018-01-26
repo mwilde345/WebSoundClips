@@ -14,7 +14,7 @@ var credentials = new AWS.SharedIniFileCredentials({
 AWS.config.credentials = credentials;
 AWS.config.region = 'us-east-1';
 var S3 = new AWS.S3();
-
+var dynamo = new AWS.DynamoDB();
 
 app.http().io()
 app.use(bodyParser.json());
@@ -48,8 +48,52 @@ app.listen('3000');
 */
 //second pass: ffmpeg -y -i trimClips/V_laNt7Sh6g_12.5_22.0.mp3 -af loudnorm=I=-10:TP=-3:LRA=11:measured_I=-16.8:measured_TP=-2.0:measured_LRA=2.6:measured_thresh=-28.4:offset=4.38:print_format=summary:linear=true loudClips/V_laNt7Sh6g_12.5_22.0_2.mp3
 
+app.io.route("post_video", function(req){
+    var videoID = req.data.videoID;
+    var clips = req.data.clips;
+    var params = {
+        Item: {
+            "videoID": {
+                S: videoID
+            },
+            "clipIDs":{
+                L:[]
+            }
+        },
+        TableName: "videosTable"
+    }
+    dynamo.putItem(params, function(err, data) {
+        if (err){
+            console.log(err, err.stack); // an error occurred
+        } 
+        else {
+            console.log(data);
+            req.io.emit("posted_video", data);
+        }
+    });
+})
+
+app.io.route("check_video_id", function(req){
+    var videoID = req.data;
+    var params = {
+        ExpressionAttributeValues:{
+            ':v':{S: videoID}
+        },
+        KeyConditionExpression: 'videoID = :v',
+        ProjectionExpression: 'videoID, clipIDs',
+        TableName: 'videosTable'
+    }
+    dynamo.query(params, function(err, data){
+        if(err){
+            console.log("Error", err);
+        }else{
+            console.log(data.Items);
+            req.io.emit("checked_video_id",data.Items);
+        }
+    })
+})
+
 app.io.route('dynamo_test', function(req){
-    var dynamo = new AWS.DynamoDB();
     var params = {
         ExpressionAttributeValues: {
             ':c':{S: 'test_clipID'},

@@ -27,17 +27,37 @@
     <div id="player"></div>
     </br>
     </br>
-    <input value="" type="text" class="form-control" id="videoID" placeholder="Paste Youtube Link" />
-    <button id="loadVideo" onclick="loadTheVideo()" class="btn btn-primary form-control">Load Video</button>
+    <div class="row">
+      <div id="loadVideoDiv" class="form-group col-md-6">
+        <input value="" type="text" class="form-control" id="videoID" placeholder="Paste Youtube Link" />
+        <button id="loadVideo" onclick="loadTheVideo()" class="btn btn-primary form-control">Load Video</button>
+      </div>
+      <div id="chooseBucketDiv" class="form-group col-md-6">
+        <div class="btn-group btn-group-toggle" data-toggle="buttons">
+          <label class="btn btn-info">
+            <input type="radio" name="options" id="quotes" autocomplete="off"> Quotes
+          </label>
+          <label class="btn btn-info">
+            <input type="radio" name="options" id="trivia" autocomplete="off"> Trivia
+          </label>
+          </br>
+          <select class="form-control" id="bucketSelect">
+            <option>default</option>
+          </select>
+        </div>
+      </div>
+    </div>
     </br>
     </br>
-    <div id="buttons" class="btn-group" role="group">
-      <a id="downloadLink" style="visibility: hidden;">download textFile</a>
-      <button id="logBtn" onclick="logTime()" class="btn btn-info">Log Time</button>
-      <button id="undoBtn" onclick="undoTime()" class="btn btn-warning">Undo</button>
-      <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
-      <button class="btn btn-primary" onclick="saveTimes()">Download Times</button>
-      <button id="testClips" onclick="test()" class="btn">Test Clips</button>
+    <div class="row">
+      <div id="buttons" class="btn-group col-md" role="group">
+        <a id="downloadLink" style="visibility: hidden;">download textFile</a>
+        <button id="logBtn" onclick="logTime()" class="btn btn-info">Log Time</button>
+        <button id="undoBtn" onclick="undoTime()" class="btn btn-warning">Undo</button>
+        <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
+        <button class="btn btn-primary" onclick="saveTimes()">Download Times</button>
+        <button id="testClips" onclick="test()" class="btn">Test Clips</button>
+      </div>
     </div>
     <br><br>
 
@@ -124,10 +144,11 @@
       <button id="trimBtn" onclick="trimClips()" class="btn btn-warning">Trim Clips</button>
       <progress value=0 id="trimProgress"></progress>
       <div id="trimOutput" class="container" style="display: none">
+        <input value="" type='text' id='masterEssential' placeholder='Essential Words'/>
+        <input value="" type='text' id='masterHints' placeholder="Hint1, hint2"/>
+        <input value="" type='text' id='masterTags' placeholder="Tag1, tag2"/>
         <input value="" type='text' id='masterMovie' placeholder="Movie Title"/>
         <input value="" type='text' id='masterCreator' placeholder="Creator"/>
-        <input value="" type='text' id='masterTags' placeholder="Tag1, tag2"/>
-        <input value="" type='text' id='masterHints' placeholder="Hint1, hint2"/>
         <button class="btn btn-info" onclick="setAllDescriptors()">Apply To All</button>
         <table id="clipTable" class="table" onclick="tableClick(event)">
           <thead>
@@ -150,7 +171,7 @@
       <div id="compressClipsDiv" style="display: none">
         <button id="checkFirstFive" onclick="checkFirstFive()" class="btn btn-info">Check First Five</button>
         <button id="compressClips" onclick="compress()" class="btn btn-warning">Compress</button>
-        <button onclick="testDynamo()" class="btn btn-large btn-primary">Test Dynamo</button>
+        <button onclick="postClips()" class="btn btn-large btn-primary">Post Clips</button>
       </div>
       <br>
       <div id="s3UploadDiv" style="display: none">
@@ -169,7 +190,59 @@
     var io = io.connect("http://localhost:3000");
     var startPressed = false;
     var stopPressed = false;
-    $("#audioStuff").hide();
+    var s3bucket = "";
+    var quoteBuckets = ["soundsofswanson","quotebucket1"];
+    var triviaBuckets = ["kidsmovietrivia","triviabucket1"];
+    var skillOption = "quotes";
+    
+
+    //TODO: default the selector to quotes and option 1
+    //TODO: default s3bucket to option 1
+
+    $(document).ready(function(){
+      $("#audioStuff").hide();
+      $("#chooseBucketDiv").hide();
+
+      //default to quotes###############
+      $("#quotes").parent().addClass("active");
+      $("#bucketSelect").find("option").remove();
+      quoteBuckets.forEach(function(item, index){
+        $("#bucketSelect").append($("<option></option>")
+        .attr("value",item+"_option")
+        .text(item));
+      });
+      s3bucket = $("#bucketSelect option:selected").text();
+      //################################
+
+      $("#chooseBucketDiv input").on('change', function(){
+        console.log("pushed radio");
+        $("#bucketSelect").find("option").remove();
+        $("#bucketSelect").show();
+        //quotes or trivia
+        skillOption = $("input[name=options][type=radio]:checked").attr('id');
+        if(skillOption=="quotes"){
+          quoteBuckets.forEach(function(item, index){
+            $("#bucketSelect").append($("<option></option>")
+            .attr("value",item+"_option")
+            .text(item));
+          });
+        
+        }else if(skillOption=="trivia"){
+          triviaBuckets.forEach(function(item, index){
+            $("#bucketSelect").append($("<option></option>")
+            .attr("value",item+"_option")
+            .text(item));
+          });
+        }
+        s3bucket = $("#bucketSelect option:selected").text();
+      });
+
+      $("#bucketSelect").change(function(){
+        var $option = $(this).find('option:selected');
+        s3bucket = $option.text();
+        console.log("new bucket is "+s3bucket);
+      });
+    });
 
     io.on('dynamo_test_done', function(data){
       console.log(data);
@@ -197,8 +270,8 @@
       var loudness = data.loudness;
       var rowString = "<tr><td>" + clipID +
         "</td><td><audio controls=controls type='audio/mpeg' src='./loudClips/" +
-        clipID + loudness + ".mp3' id='" + clipID + "_audio'/></td>" +
-        "<td id='" + clipID + "_loudness'>" + loudness + "</td>" +
+        clipID + loudness + ".mp3' id='clipAudio'/></td>" +
+        "<td id='clipLoudness'>" + loudness + "</td>" +
         "<td><input type='text' value='" + loudness + "' id='" + clipID + "_change'></input>" +
         "<button id='changeButton' name='" + clipID + "' class='btn btn-info'>Change Loudness</button></td>"+
         "<td><input value='' type='text' id='firstFive' placeholder='First Five'/>"+
@@ -219,6 +292,7 @@
         $("#trimBtn").attr("disabled", false);
       }
     });
+
 
     io.on('loudness_done', function (data) {
       var newLoudness = data.loudness;
