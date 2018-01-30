@@ -11,9 +11,12 @@
 //if not, insert new video entry with empty clips (or set a flag to do that later once 
 //i have all the clips)
 
-function testDynamo(){
-    io.emit('dynamo_test');
+function dumpClips(){
+    io.emit("dump_clips");
 }
+io.on("dumped_clips", function(number){
+    console.log("removed: "+number+" files");
+})
 
 function checkVideoID(videoID){
     //select from videoTable where videoID = videoID
@@ -173,18 +176,38 @@ function getClip(clipID){
 function checkFirstFive(){
     var firstFives = [];
     var movie = "";
-    console.log("checking first five");
+    var errorFlag = false;
     $("tr #firstFiveConflict").remove();
     $("#clipTable tr #firstFive").each(function(index, item){
         if(index in approvedClips||index in deniedClips){
             console.log("skipping row "+index);
             return true;
         }
-        if(!$(item).val().length){alert("First Five entries may not be empty"); return false;}
-        movie = $("#clipTable tr:eq("+(index+1)+") input")[5].value;
-        firstFives.push({row: index, firstFive: $(item).val()});
+        if(!$(item).val().length){
+            errorFlag = true;
+            alert("First Five entries may not be empty");
+            return false;
+        }
+        if(findDuplicates(firstFives, $(item).val().trim())){
+            errorFlag = true;
+            alert("Remove duplicate First Five entries");
+            return false;
+        }
+        firstFives.push({row: index, firstFive: $(item).val().trim()});
     });
-    io.emit('checkFirstFive',{firstFives: firstFives, skillOption: skillOption, s3bucket: s3bucket});
+    if(!errorFlag){
+        io.emit('checkFirstFive',{firstFives: firstFives, skillOption: skillOption, s3bucket: s3bucket});
+    }
+}
+
+function findDuplicates(firstFives, currentFirstFive){
+    var duplicateFound = false;
+    firstFives.map(function(item){
+        if(item.firstFive==currentFirstFive){
+            duplicateFound = true;
+        }
+    });
+    return duplicateFound;
 }
 
 function validateEntries(){

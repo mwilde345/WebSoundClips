@@ -59,6 +59,7 @@
         <button id="resetBtn" onclick="resetTime()" class="btn btn-danger">Reset</button>
         <button class="btn btn-primary" onclick="saveTimes()">Download Times</button>
         <button id="testClips" onclick="test()" class="btn">Test Clips</button>
+        <button id="dumpClips" onclick="dumpClips()" class="btn btn-danger">dump clips</button>
       </div>
     </div>
     <br><br>
@@ -205,9 +206,6 @@
     var deniedClips = {};
     var approvedClips = {};
 
-    //TODO: default the selector to quotes and option 1
-    //TODO: default s3bucket to option 1
-
     $(document).ready(function(){
       // $("#audioStuff").hide();
       // $("#chooseBucketDiv").hide();
@@ -265,6 +263,8 @@
         console.log("found matching clips: "+clipIDs.toString());
         $("#clipTableBody tr:eq("+row+") #firstFive").after(checkFiveBtns);
         conflictObject[row] = clipIDs;
+      }else{
+        console.log("No conflicts found!");
       }
       
     });
@@ -281,6 +281,10 @@
       $("audio").prop("src", 'videoSound/' + videoID + ".mp3");
       peaksFunction(peaks, videoID);
       addSegments(gatherTimes(), peaksInstance);
+    });
+    io.on("download_error", function(){
+      alert("error with download. please retry");
+      $("#downloadBtn").prop("disabled", false);
     });
     io.on('trim_done', function (data) {
       var clipID = data.clipID;

@@ -191,10 +191,12 @@ app.io.route('checkFirstFive', function(req){
             } else {
                 // print all the movies
                 console.log("Scan succeeded.");
-                data.Items.forEach(function(clip) {
-                    results.push(clip);
-                    console.log(clip);
-                });
+                if(data.Items.length){
+                    data.Items.forEach(function(clip) {
+                        results.push(clip);
+                        console.log(clip);
+                    });
+                }
                 // continue scanning if we have more movies, because
                 // scan can retrieve a maximum of 1MB of data
                 if (typeof data.LastEvaluatedKey != "undefined") {
@@ -487,26 +489,46 @@ app.io.route('s3_upload', function (req) {
 });
 
 app.io.route('dump_clips', function (req) {
-    var videoID = req.data.videoID;
-    //upload to s3
-    dumpClips(videoID, function () {
-
+    dumpClips(function (number) {
+        console.log("dumped "+number+" clips");
+        req.io.emit("dumped_clips",number);
     });
 });
 
-function dumpClips(videoID, callback) {
+function dumpClips(callback) {
     var dirs = ['videoSound', 'videoDat', 'trimClips', 'loudClips', 'compressedClips'];
+    var number = 0;
+    console.log("dumping clips");
+    var remainingDirs = 5;
     dirs.forEach(function (dir, index) {
         fs.readdir(dir, function (err, files) {
             if (err) throw err;
             for (const file of files) {
-                fs.unlink(path.join(dir, file), err => {
-                    if (err) throw err;
+                console.log(file);
+                //this keeps getting run before the previous one is finished. so it's overwritten.
+                //never gets to 0;
+                var remainingFiles = files.length;
+                console.log(remainingFiles);
+                fs.unlink(path.join(dir, file), (err) => {
+                    if (err){
+                        throw err;
+                    }else{
+                        console.log("removed file");
+                        number+=1;
+                        remainingFiles-=1;
+                        if(remainingFiles==0){
+                            remainingDirs-=1;
+                            if(remainingDirs==0){
+                                callback(number);
+                            }
+                        }
+                    }
                 })
             }
         });
+        
     });
-    callback();
+  
 }
 
 function trimClip(data, callback) {
@@ -552,6 +574,8 @@ app.io.route('download', function (req) {
                 //res.send(JSON.stringify({videoID: videoID}));
                 //res.send('finished');
                 //send isn't working, so probs download to local.
+            }else{
+                req.io.emit("download_error");
             }
         },
         //make a progress bar.
