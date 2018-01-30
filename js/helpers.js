@@ -11,8 +11,6 @@
 //if not, insert new video entry with empty clips (or set a flag to do that later once 
 //i have all the clips)
 
-//
-
 function testDynamo(){
     io.emit('dynamo_test');
 }
@@ -28,7 +26,7 @@ io.on("checked_video_id",function(data){
     console.log(data);
     if(!data.length){
         postVideo(videoID, []);
-    }else{
+    }else{ 
         displayClips(data[0]);
     }
     //if not null then getAllClips else
@@ -43,7 +41,9 @@ function displayClips(videoObject){
         console.log("no clips yet");
         return;
     }else{
+        console.log("running displayClips");
         clips.L.forEach(function(item,index){
+            clipsForThisVideo.push(item);
             console.log(item);
         });
     }
@@ -62,13 +62,17 @@ function postClips(){
         var clipData = {
             clipID: $($(rowData).find('#clipAudio')).attr('src').match(/(.*\/)(.*)(\.mp3.*)/)[2],
             firstFive: $($(rowData).find("#firstFive")).val(),
-            essential: $($(rowData).find("#essential")).val(),
-            hints: $($(rowData).find("#hints")).val(),
-            tags: $($(rowData).find("#tags")).val(),
-            movie: $($(rowData).find("#movie")).val(),
+            essentialWords: $($(rowData).find("#essential")).val().split(',')
+                .map(function(v){return v.toLowerCase().trim()}),
+            hints: $($(rowData).find("#hints")).val().split(',')
+                .map(function(v){return v.toLowerCase().trim()}),
+            tags: $($(rowData).find("#tags")).val().split(',')
+                .map(function(v){return v.toLowerCase().trim()}),
+            movieTitle: $($(rowData).find("#movie")).val(),
             creator: $($(rowData).find("#creator")).val(),
             s3bucket: s3bucket
         }
+        clipData = validateArgs(clipData);
         if(skillOption=="quotes"){
             clipData = {
                 clipID: clipData.clipID,
@@ -77,19 +81,46 @@ function postClips(){
             }
         }
         clips.push(clipData);
+    });
+    clips.forEach(function(item, index){
+        if(clipsForThisVideo.indexOf(item.clipID)>=0){
+            console.log("skipped "+item.clipID);
+            return;
+        }else{
+            clipsForThisVideo.push(item.clipID);
+            if(skillOption=="quotes"){
+                postQuote(item);
+            }else if(skillOption=="trivia"){
+                postTrivia(item);
+            }
+        }
+
     })
+    postVideo(videoID);
     console.log(clips);
 }
 
-function postQuotes(clipData){
+function validateArgs(clipData){
+    for(key in clipData){
+        //console.log(key);
+        if(!clipData[key].length){
+            clipData[key] = " ";
+        }
+    }
+    return clipData;
+}
+
+function postQuote(clipData){
     //post to quotes
-    io.emit("post_quotes", clipData);
-    postVideos(videoID, clips);
+    io.emit("post_quote", clipData);
+    
     //post to videosTable
     //put it in the specified s3bucket
 }
 
-io.on("posted_quotes", function(data){
+io.on("posted_quote", function(data){
+    console.log("posted quote");
+    //clipsForThisVideo.push(data);
     console.log(data);
 });
 
@@ -101,14 +132,19 @@ function postTrivia(clipData){
 }
 
 io.on("posted_trivia", function(data){
+    console.log("posted trivia");
+    //clipsForThisVideo.push(data);
     console.log(data);
 });
 
-function postVideo(videoID, clips){
-    io.emit("post_video",{videoID: videoID, clips: clips});
+function postVideo(videoID){
+    console.log("posting video with clilps: ");
+    console.log(clipsForThisVideo);
+    io.emit("post_video",{videoID: videoID, clips: clipsForThisVideo});
 }
 
 io.on("posted_video", function(data){
+    console.log("posted video");
     console.log(data);
 });
 
@@ -135,19 +171,62 @@ function getClip(clipID){
 }
 
 function checkFirstFive(){
-    //TODO: field to apply all tags and hints as well
-    //verify at least 1 hint.
     var firstFives = [];
     var movie = "";
+    console.log("checking first five");
+    $("tr #firstFiveConflict").remove();
     $("#clipTable tr #firstFive").each(function(index, item){
+        if(index in approvedClips||index in deniedClips){
+            console.log("skipping row "+index);
+            return true;
+        }
         if(!$(item).val().length){alert("First Five entries may not be empty"); return false;}
         movie = $("#clipTable tr:eq("+(index+1)+") input")[5].value;
-        firstFives.push({row: index, firstFive: $(item).val(), movie: movie});
+        firstFives.push({row: index, firstFive: $(item).val()});
     });
-    if($("#clipTable tr #firstFive").length==firstFives.length){
-        io.emit('checkFirstFive',firstFives);
-    }
+    io.emit('checkFirstFive',{firstFives: firstFives, skillOption: skillOption, s3bucket: s3bucket});
+}
+
+function validateEntries(){
+    //for each row:
+    //first fives cannot equal each other
+    //if trivia, make sure nothing is empty
+    //if quotes, all we need are the first five.
+}
+
+function viewConflicts(button){
+    var row = $(button).closest("tr").index();
+    var clipIDs = conflictObject[row];
+    $("#my_tooltip tbody tr").remove();
+    clipIDs.forEach(function(item,index){
+        $("#my_tooltip tbody").append('<tr>'+
+        '<td><audio src="https://s3.amazonaws.com/'+s3bucket+'/'+item.clipID+'.mp3" controls="controls" type="audio/mpeg"/></td>'+
+        '<td>'+item.clipID+'</td>'+
+        '</tr>');
+    })
     
+    $('#my_tooltip').popup({
+        type: 'tooltip',
+        vertical: 'bottom',
+        transition: '0.3s all 0.1s',
+        tooltipanchor: $(button),
+        autoopen: true
+    });
+    console.log("Conflicts on row: "+(row+1)+" are: "+conflictObject[row].toString());
+}
+function approve(button){
+    var row = $(button).closest("tr").index();
+    var clipID = $(button).find("td:eq(0)").text();
+    approvedClips[row] = clipID;
+    $("#clipTableBody tr:eq("+row+")").addClass("approved");
+    $("#clipTableBody tr:eq("+row+") #firstFiveConflict").remove();
+}
+function deny(button){
+    var row = $(button).closest("tr").index();
+    var clipID = $(button).find("td:eq(0)").text();
+    deniedClips[row] = clipID;
+    $("#clipTableBody tr:eq("+row+")").addClass("denied");
+    $("#clipTableBody tr:eq("+row+") #firstFiveConflict").remove();
 }
 
 function saveSegments(){
@@ -210,13 +289,13 @@ function loadTheVideo() {
         //call dynamodb and search for duplicate videoID
         console.log(videoID);
         player.loadVideoById(videoID);
-        $("#chooseBucketDiv").show();
+        // $("#chooseBucketDiv").show();
         checkVideoID(videoID);
     }
 }
 
 function compress() {
-    $("#s3UploadDiv").show();
+    // $("#s3UploadDiv").show();
     getClipIds().forEach(function(item,index){
         //compressedClips.push(clipID + loudness);
         io.emit('compress',{
@@ -226,23 +305,24 @@ function compress() {
 }
 
 function s3upload() {
-    var s3Bucket = $("#s3Bucket").val();
-    if(!s3Bucket.length){
+    //var s3Bucket = s3bucket
+    console.log("uploading to : "+s3bucket);
+    if(!s3bucket.length){
         alert("No Bucket Specified!");
         return;
     }
     getClipIds().forEach(function(item,index){
         io.emit('s3_upload', {
             clipID: item,
-            s3Bucket: s3Bucket
+            s3bucket: s3bucket
         });
     });
 }
 
 function getClipIds(){
     var allClips = [];
-    $("#clipTable tr").each(function (index, item) {
-        if(index==0){ return true;}
+    $("#clipTableBody tr").each(function (index, item) {
+        if(index in deniedClips){ return true;}
         var clipID = $(item).find("td:eq(0)").text();
         var loudness = $(item).find("td:eq(2)").text(); 
         allClips.push(clipID + loudness);
@@ -318,7 +398,7 @@ function download() {
         var r = confirm("Overwrite mp3 file?");
         if (!r) return;
         peaksInstance.destroy();
-        $("#audioStuff").hide();
+        // $("#audioStuff").hide();
         $("#clipTable tr").slice(1).remove();
     }
     var data = {};
@@ -352,8 +432,8 @@ function gatherTimes() {
 function trimClips() {
     //the server breaks on the trim command if i do it too quick?
     $("#trimBtn").attr('disabled',true);
-    $("#trimOutput").hide();
-    $("#compressClipsDiv").hide();
+    // $("#trimOutput").hide();
+    // $("#compressClipsDiv").hide();
     $("#trimProgress").val(0);
     $("#clipTable tr").slice(1).remove();
     var segments = peaksInstance.segments.getSegments();
@@ -388,7 +468,7 @@ function addSegments(timeSegments, peaksInstance) {
 
 function test() {
     videoID = "V_laNt7Sh6g";
-    $("#audioStuff").show();
+    // $("#audioStuff").show();
     $("audio").prop("src", "./videoSound/" + videoID + ".mp3");
     $("#clipTable tr").slice(1).remove();
     if (peaksInstance != null) {
@@ -398,6 +478,7 @@ function test() {
         startTimes: [0.0,7.4,13.4,19.6,36.3,53.6,67.6],
         stopTimes: [7.1,13.1,18.3,28.4,43.9,67.5,78.3]
     };
+    //loadTheVideo();
     peaksFunction(peaks, videoID);
     addSegments(segments, peaksInstance);
     segments.startTimes.forEach(function(item, index){
@@ -411,9 +492,6 @@ function test() {
         "<td><input type='text' value='" + loudness + "' id='" + clipID + "_change'></input>" +
         "<button id='changeButton' name='" + clipID + "' class='btn btn-info'>Change Loudness</button></td>"+
         "<td><input value='' type='text' id='firstFive' placeholder='First Five'/>"+
-        "<button id='viewConflicts' class='btn btn-primary'><span class='glyphicon glyphicon-search'/></button>"+
-        "<button id='approve' class='btn btn-success'><span class='glyphicon glyphicon-ok'/></button>"+
-        "<button id='deny' class='btn btn-danger'><span class='glyphicon glyphicon-remove'/></button>"+
         "<td><input value='' type='text' id='essential' placeholder='Essential Words'/></td>"+
         "<td><input value='' type='text' id='hints' placeholder='Hints'/></td>"+
         "<td><input value='' type='text' id='tags' placeholder='Tags'/></td>"+
@@ -424,8 +502,8 @@ function test() {
         $("#trimProgress").val($("#clipTable audio").length);
     });
     //if($("#clipTable audio").length==peaksInstance.segments.getSegments().length){
-        $("#trimOutput").show();
-        $("#compressClipsDiv").show();
+        // $("#trimOutput").show();
+        // $("#compressClipsDiv").show();
         $("#trimBtn").attr("disabled", false);
       //}
 }

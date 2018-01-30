@@ -14,6 +14,7 @@ var credentials = new AWS.SharedIniFileCredentials({
 AWS.config.credentials = credentials;
 AWS.config.region = 'us-east-1';
 var S3 = new AWS.S3();
+var dynamoDoc = new AWS.DynamoDB.DocumentClient();
 var dynamo = new AWS.DynamoDB();
 
 app.http().io()
@@ -48,23 +49,67 @@ app.listen('3000');
 */
 //second pass: ffmpeg -y -i trimClips/V_laNt7Sh6g_12.5_22.0.mp3 -af loudnorm=I=-10:TP=-3:LRA=11:measured_I=-16.8:measured_TP=-2.0:measured_LRA=2.6:measured_thresh=-28.4:offset=4.38:print_format=summary:linear=true loudClips/V_laNt7Sh6g_12.5_22.0_2.mp3
 
-app.io.route("post_video", function(req){
-    var videoID = req.data.videoID;
-    var clips = req.data.clips;
+app.io.route('post_trivia', function(req){
+    var clipData = req.data;
     var params = {
         Item: {
-            "videoID": {
-                S: videoID
-            },
-            "clipIDs":{
-                L:[]
-            }
+            "clipID":clipData.clipID,
+            "s3bucket":clipData.s3bucket,
+            "movieTitle":clipData.movieTitle,
+            "creator":clipData.creator,
+            "tags":clipData.tags,
+            "firstFive":clipData.firstFive,
+            "hints": clipData.hints,
+            "essentialWords": clipData.essentialWords
+        },
+        TableName: "triviaClips"
+    }
+    dynamoDoc.put(params, function(err, data){
+        if(err){
+            console.log(err, err.stack);
+        }else{
+            console.log(data);
+            req.io.emit("posted_trivia", clipData.clipID);
+        }
+    })
+})
+
+app.io.route('post_quote', function(req){
+    var clipData = req.data;
+    var params = {
+        Item: {
+            "clipID":clipData.clipID,
+            "s3bucket":clipData.s3bucket,
+            "firstFive":clipData.firstFive
+        },
+        TableName: "quotes"
+    }
+    dynamoDoc.put(params, function(err, data){
+        if(err){
+            console.log(err, err.stack);
+        }else{
+            console.log(data);
+            req.io.emit("posted_quote", clipData.clipID);
+        }
+    })
+})
+
+app.io.route("post_video", function(req){
+    var videoID = req.data.videoID;
+    console.log(videoID);
+    var clips = req.data.clips;
+    //console.log(clips);
+    var params = {
+        Item: {
+            "videoID": videoID,
+            "clipIDs": clips
         },
         TableName: "videosTable"
     }
-    dynamo.putItem(params, function(err, data) {
+    dynamoDoc.put(params, function(err, data) {
         if (err){
-            console.log(err, err.stack); // an error occurred
+            console.log(err.stack);
+            //console.log(err, err.stack); // an error occurred
         } 
         else {
             console.log(data);
@@ -77,13 +122,13 @@ app.io.route("check_video_id", function(req){
     var videoID = req.data;
     var params = {
         ExpressionAttributeValues:{
-            ':v':{S: videoID}
+            ':v':videoID
         },
         KeyConditionExpression: 'videoID = :v',
         ProjectionExpression: 'videoID, clipIDs',
         TableName: 'videosTable'
     }
-    dynamo.query(params, function(err, data){
+    dynamoDoc.query(params, function(err, data){
         if(err){
             console.log("Error", err);
         }else{
@@ -96,9 +141,9 @@ app.io.route("check_video_id", function(req){
 app.io.route('dynamo_test', function(req){
     var params = {
         ExpressionAttributeValues: {
-            ':c':{S: 'test_clipID'},
-            //':f':{S: 'first five'},
-            ':b':{S: 'bucket_name'}
+            ':c':'test_clipID',
+            //':f':'first five'},
+            ':b': 'bucket_name'
         },
         KeyConditionExpression: 's3bucket = :b',
         FilterExpression: /*'contains(firstFive,:f) and */'contains(clipID, :c)',
@@ -107,7 +152,7 @@ app.io.route('dynamo_test', function(req){
         TableName: 'quotes'
     };
     console.log("calling dynamo");
-    dynamo.query(params, function(err, data){
+    dynamoDoc.query(params, function(err, data){
         if(err){
             console.log("Error", err);
         }else{
@@ -119,10 +164,53 @@ app.io.route('dynamo_test', function(req){
 })
 
 app.io.route('checkFirstFive', function(req){
-    var firstFives = req.data;
-    console.log(firstFives);
+    var firstFives = req.data.firstFives;
+    var skillOption = req.data.skillOption;
+    var s3bucket = req.data.s3bucket;
+    console.log("going through firstFives: "+firstFives);
+    firstFives.forEach(function(item,index){
+        var row = item.row;
+        var firstFive = item.firstFive.toLowerCase().trim();
+        if(skillOption=="trivia"){
+            var table = "triviaClips";
+        }else var table = "quotes";
+        var params = {
+            TableName: table,
+            ProjectionExpression: "clipID",
+            FilterExpression: "firstFive = :firstFive and s3bucket = :s3bucket",
+            ExpressionAttributeValues: {
+                 ":firstFive": firstFive,
+                 ":s3bucket": s3bucket
+            }
+        };
+        dynamoDoc.scan(params, onScan);
+        var results = [];
+        function onScan(err, data) {
+            if (err) {
+                console.error("Unable to scan the table. Error JSON:", JSON.stringify(err, null, 2));
+            } else {
+                // print all the movies
+                console.log("Scan succeeded.");
+                data.Items.forEach(function(clip) {
+                    results.push(clip);
+                    console.log(clip);
+                });
+                // continue scanning if we have more movies, because
+                // scan can retrieve a maximum of 1MB of data
+                if (typeof data.LastEvaluatedKey != "undefined") {
+                    console.log("Scanning for more...");
+                    params.ExclusiveStartKey = data.LastEvaluatedKey;
+                    dynamoDoc.scan(params, onScan);
+                }else{
+                    console.log("emitting for row: "+row);
+                    req.io.emit("checked_first_five",{results: results, row: row});  
+                }
+            }
+        }
+        //req.io.emit("checked_first_five",{results: results, row: row});
+    });
+
     
-    req.io.emit("checked_first_five","checked em");
     //dynamo_call(firstFives);
 /*
 return:
@@ -377,10 +465,11 @@ app.io.route('compress', function (req) {
 
 app.io.route('s3_upload', function (req) {
     var clipID = req.data.clipID;
+    var s3bucket = req.data.s3bucket;
     var fileBuffer = fs.readFileSync('compressedCLips/' + clipID + ".mp3");
     S3.putObject({
             ACL: 'public-read',
-            Bucket: 'soundsofswanson',
+            Bucket: s3bucket,
             Key: clipID + '.mp3',
             Body: fileBuffer,
             ContentType: 'audio/mpeg'

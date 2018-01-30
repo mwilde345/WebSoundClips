@@ -1,0 +1,13 @@
+.well {
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    display:none;
+    margin:1em;
+  }
+
+.denied {
+    background-color: rgba(224, 75, 75, 0.596)
+}
+
+.approved {
+    background-color: rgba(15, 141, 15, 0.555)
+}

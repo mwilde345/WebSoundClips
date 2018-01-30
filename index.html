@@ -7,7 +7,8 @@
   </title>
   <meta charset="UTF-8">
   <!-- Latest compiled and minified CSS -->
-  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="style.css"/>
 
   <!-- jQuery library -->
   <script src="js/jquery-3.2.1.min.js"></script>
@@ -16,6 +17,7 @@
   <script src="bootstrap/js/bootstrap.min.js"></script>
   <script src="node_modules/peaks.js/peaks.js"></script>
   <script src="node_modules/socket.io-client/dist/socket.io.js"></script>
+  <script src="js/jquery-popup-overlay-gh-pages/jquery.popupoverlay.js"></script>
 </head>
 
 <body>
@@ -49,7 +51,7 @@
     </div>
     </br>
     </br>
-    <div class="row">
+    <div class="row test-class">
       <div id="buttons" class="btn-group col-md" role="group">
         <a id="downloadLink" style="visibility: hidden;">download textFile</a>
         <button id="logBtn" onclick="logTime()" class="btn btn-info">Log Time</button>
@@ -124,7 +126,7 @@
       </div>
 
       <div class="log">
-        <div id="segments" class="hide">
+        <div id="segments" class=""> <!--.hide class?-->
           <h2>Segments</h2>
           <table class="table">
             <thead>
@@ -143,7 +145,7 @@
       </div>
       <button id="trimBtn" onclick="trimClips()" class="btn btn-warning">Trim Clips</button>
       <progress value=0 id="trimProgress"></progress>
-      <div id="trimOutput" class="container" style="display: none">
+      <div id="trimOutput" class="container">
         <input value="" type='text' id='masterEssential' placeholder='Essential Words'/>
         <input value="" type='text' id='masterHints' placeholder="Hint1, hint2"/>
         <input value="" type='text' id='masterTags' placeholder="Tag1, tag2"/>
@@ -168,14 +170,14 @@
           <tbody id="clipTableBody"></tbody>
         </table>
       </div>
-      <div id="compressClipsDiv" style="display: none">
+      <div id="compressClipsDiv">
         <button id="checkFirstFive" onclick="checkFirstFive()" class="btn btn-info">Check First Five</button>
         <button id="compressClips" onclick="compress()" class="btn btn-warning">Compress</button>
         <button onclick="postClips()" class="btn btn-large btn-primary">Post Clips</button>
       </div>
       <br>
-      <div id="s3UploadDiv" style="display: none">
-        <input value="" type="text" class="form-control" id="s3Bucket" placeholder="bucket name"/>
+      <div id="s3UploadDiv" >
+        <input value="" autocomplete="off" type="text" class="form-control" id="s3Bucket" placeholder="bucket name"/>
         <button id="s3upload" onclick="s3upload()" class="btn btn-success">S3 Upload</button>
       </div>
     </div>
@@ -191,17 +193,24 @@
     var startPressed = false;
     var stopPressed = false;
     var s3bucket = "";
-    var quoteBuckets = ["soundsofswanson","quotebucket1"];
-    var triviaBuckets = ["kidsmovietrivia","triviabucket1"];
+    var quoteBuckets = ["soundsofswanson"];
+    var triviaBuckets = ["kidsmovietrivia"];
     var skillOption = "quotes";
-    
+    clipsForThisVideo = [];
+    var checkFiveBtns = "<div id='firstFiveConflict' class='btn-group' role='group'>"+
+        "<button id='viewConflicts' class='btn btn-primary' onclick=viewConflicts(this)><span class='glyphicon glyphicon-search'/></button>"+
+        "<button id='approve' class='btn btn-success' onclick=approve(this)><span class='glyphicon glyphicon-ok'/></button>"+
+        "<button id='deny' class='btn btn-danger' onclick=deny(this)><span class='glyphicon glyphicon-remove'/></button></div>";
+    var conflictObject = {};
+    var deniedClips = {};
+    var approvedClips = {};
 
     //TODO: default the selector to quotes and option 1
     //TODO: default s3bucket to option 1
 
     $(document).ready(function(){
-      $("#audioStuff").hide();
-      $("#chooseBucketDiv").hide();
+      // $("#audioStuff").hide();
+      // $("#chooseBucketDiv").hide();
 
       //default to quotes###############
       $("#quotes").parent().addClass("active");
@@ -217,7 +226,7 @@
       $("#chooseBucketDiv input").on('change', function(){
         console.log("pushed radio");
         $("#bucketSelect").find("option").remove();
-        $("#bucketSelect").show();
+        // $("#bucketSelect").show();
         //quotes or trivia
         skillOption = $("input[name=options][type=radio]:checked").attr('id');
         if(skillOption=="quotes"){
@@ -249,7 +258,15 @@
     });
 
     io.on('checked_first_five', function(data){
-      console.log(data);
+      var clipIDs = data.results;
+      var row = data.row;
+      if(clipIDs.length){
+        console.log("row: "+row);
+        console.log("found matching clips: "+clipIDs.toString());
+        $("#clipTableBody tr:eq("+row+") #firstFive").after(checkFiveBtns);
+        conflictObject[row] = clipIDs;
+      }
+      
     });
 
     io.on("download_progress", function (data) {
@@ -260,7 +277,7 @@
       //update progres bar to 100 if it isn't already there
       videoID = data;
       $("#downloadBtn").prop("disabled", false);
-      $("#audioStuff").show();
+      // $("#audioStuff").show();
       $("audio").prop("src", 'videoSound/' + videoID + ".mp3");
       peaksFunction(peaks, videoID);
       addSegments(gatherTimes(), peaksInstance);
@@ -274,10 +291,7 @@
         "<td id='clipLoudness'>" + loudness + "</td>" +
         "<td><input type='text' value='" + loudness + "' id='" + clipID + "_change'></input>" +
         "<button id='changeButton' name='" + clipID + "' class='btn btn-info'>Change Loudness</button></td>"+
-        "<td><input value='' type='text' id='firstFive' placeholder='First Five'/>"+
-        "<button id='viewConflicts' class='btn btn-primary'><span class='glyphicon glyphicon-search'/></button>"+
-        "<button id='approve' class='btn btn-success'><span class='glyphicon glyphicon-ok'/></button>"+
-        "<button id='deny' class='btn btn-danger'><span class='glyphicon glyphicon-remove'/></button>"+
+        "<td><input value='' type='text' id='firstFive' placeholder='First Five'/></td>"+
         "<td><input value='' type='text' id='essential' placeholder='Essential Words'/></td>"+
         "<td><input value='' type='text' id='hints' placeholder='Hints'/></td>"+
         "<td><input value='' type='text' id='tags' placeholder='Tags'/></td>"+
@@ -287,8 +301,8 @@
       $("#clipTableBody").append(rowString);
       $("#trimProgress").val($("#clipTable audio").length);
       if($("#clipTable audio").length==peaksInstance.segments.getSegments().length){
-        $("#trimOutput").show();
-        $("#compressClipsDiv").show();
+        // $("#trimOutput").show();
+        // $("#compressClipsDiv").show();
         $("#trimBtn").attr("disabled", false);
       }
     });
@@ -317,6 +331,25 @@
   <script src="js/peaksHelper.js"></script>
   <script src="js/helpers.js"></script>
   <script src="js/fileUpload.js"></script>
+
+  <!-- TEMPLATES??? -->
+
+  <div id="my_tooltip" class="well">
+      <a href="#" class="my_tooltip_close" style="float:right;padding:0 0.4em;">×</a>
+      <h4>Conflicting Audio Samples</h4>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Audio</th>
+            <th>ClipID</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+      <p>Review samples. Then approve it or remove it.</p>
+      <button class="my_tooltip_close btn btn-default">Close</button>
+  </div>
 </body>
 
 </html>
