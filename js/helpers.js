@@ -11,6 +11,7 @@
 //if not, insert new video entry with empty clips (or set a flag to do that later once 
 //i have all the clips)
 
+
 function dumpClips(){
     io.emit("dump_clips");
 }
@@ -19,33 +20,26 @@ io.on("dumped_clips", function(number){
 })
 
 function checkVideoID(videoID){
-    //select from videoTable where videoID = videoID
-    //if videoID already exists, getAllClips()
-    //if not, post<Quotes|Trivia>
     io.emit("check_video_id",videoID);
 }
 
 io.on("checked_video_id",function(data){
-    console.log(data);
     if(!data.length){
         postVideo(videoID, []);
     }else{ 
         displayClips(data[0]);
     }
-    //if not null then getAllClips else
-    //postVideo(videoID,[])
 });
 
 function displayClips(videoObject){
     var videoID = videoObject.videoID;
-    var clips = videoObject.clipIDs.L;
+    var clips = videoObject.clipIDs;
     console.log("Video found! Clips: ");
     if(!clips.length) {
         console.log("no clips yet");
         return;
     }else{
-        console.log("running displayClips");
-        clips.L.forEach(function(item,index){
+        clips.forEach(function(item,index){
             clipsForThisVideo.push(item);
             console.log(item);
         });
@@ -88,7 +82,7 @@ function postClips(){
     clips.forEach(function(item, index){
         if(clipsForThisVideo.indexOf(item.clipID)>=0){
             console.log("skipped "+item.clipID);
-            return;
+            //return;
         }else{
             clipsForThisVideo.push(item.clipID);
             if(skillOption=="quotes"){
@@ -100,12 +94,10 @@ function postClips(){
 
     })
     postVideo(videoID);
-    console.log(clips);
 }
 
 function validateArgs(clipData){
     for(key in clipData){
-        //console.log(key);
         if(!clipData[key].length){
             clipData[key] = " ";
         }
@@ -114,17 +106,13 @@ function validateArgs(clipData){
 }
 
 function postQuote(clipData){
-    //post to quotes
     io.emit("post_quote", clipData);
-    
     //post to videosTable
     //put it in the specified s3bucket
 }
 
 io.on("posted_quote", function(data){
-    console.log("posted quote");
-    //clipsForThisVideo.push(data);
-    console.log(data);
+    console.log("posted to quote table: "+data);
 });
 
 function postTrivia(clipData){
@@ -135,20 +123,16 @@ function postTrivia(clipData){
 }
 
 io.on("posted_trivia", function(data){
-    console.log("posted trivia");
+    console.log("posted to triviaClips table: "+data);
     //clipsForThisVideo.push(data);
-    console.log(data);
 });
 
 function postVideo(videoID){
-    console.log("posting video with clilps: ");
-    console.log(clipsForThisVideo);
     io.emit("post_video",{videoID: videoID, clips: clipsForThisVideo});
 }
 
 io.on("posted_video", function(data){
-    console.log("posted video");
-    console.log(data);
+    console.log("posted to videosTable: "+data);
 });
 
 function checkFive(s3bucket, fiveWords){
@@ -180,7 +164,6 @@ function checkFirstFive(){
     $("tr #firstFiveConflict").remove();
     $("#clipTable tr #firstFive").each(function(index, item){
         if(index in approvedClips||index in deniedClips){
-            console.log("skipping row "+index);
             return true;
         }
         if(!$(item).val().length){
@@ -235,7 +218,6 @@ function viewConflicts(button){
         tooltipanchor: $(button),
         autoopen: true
     });
-    console.log("Conflicts on row: "+(row+1)+" are: "+conflictObject[row].toString());
 }
 function approve(button){
     var row = $(button).closest("tr").index();
@@ -254,8 +236,6 @@ function deny(button){
 
 function saveSegments(){
     var times = peaksInstance.segments.getSegments();
-    console.log(times);
-    console.log("downloading");
     $.ajax({
         url: '/save_segments',
         method: 'POST',
@@ -263,7 +243,6 @@ function saveSegments(){
         //dataType: 'json',
         contentType: 'application/json',
         success: function(result){
-            console.log(result);
             $("#downloadLink").attr('href','download_segments/'+videoID);
             $("#downloadLink").get(0).click();
         },
@@ -277,8 +256,6 @@ function saveSegments(){
 
 function saveTimes(){
     var times = gatherTimes();
-    console.log(times);
-    console.log("downloading");
     $.ajax({
         url: '/save_times',
         method: 'POST',
@@ -286,7 +263,6 @@ function saveTimes(){
         //dataType: 'json',
         contentType: 'application/json',
         success: function(result){
-            console.log(result);
             $("#downloadLink").attr('href','download_times/'+videoID);
             $("#downloadLink").get(0).click();
         },
@@ -310,7 +286,6 @@ function loadTheVideo() {
         //$("#timeTableBody tr").remove();
         videoID = input[3];
         //call dynamodb and search for duplicate videoID
-        console.log(videoID);
         player.loadVideoById(videoID);
         // $("#chooseBucketDiv").show();
         checkVideoID(videoID);
@@ -329,7 +304,7 @@ function compress() {
 
 function s3upload() {
     //var s3Bucket = s3bucket
-    console.log("uploading to : "+s3bucket);
+    console.log("uploading to: "+s3bucket);
     if(!s3bucket.length){
         alert("No Bucket Specified!");
         return;
@@ -361,9 +336,6 @@ function tableClick(event) {
         //var newLoudness = $("#clipTable tr:eq(" + rowNum + ") input#"+clipID+"_change").val();
         var newLoudness = $("#clipTable tr:eq(" + rowNum + ") input")[0].value;
         if(!newLoudness.length){ newLoudness = -13};
-        console.log(newLoudness);
-        console.log(clipID);
-        console.log(rowNum);
         io.emit('loudness', {
             clipID: clipID,
             loudness: newLoudness,
@@ -426,7 +398,6 @@ function download() {
     }
     var data = {};
     data.url = "https://www.youtube.com/watch?v="+videoID;
-    console.log(data.url);
     io.emit('download', data);
 }
 
@@ -477,7 +448,6 @@ function trimClips() {
 function addSegments(timeSegments, peaksInstance) {
     peaksInstance.on('peaks.ready', function () {
         timeSegments.startTimes.forEach(function (item, index) {
-            console.log("adding segment " + index);
             peaksInstance.segments.add({
                 startTime: timeSegments.startTimes[index],
                 endTime: timeSegments.stopTimes[index],

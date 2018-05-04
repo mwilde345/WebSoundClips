@@ -49,6 +49,23 @@ app.listen('3000');
 */
 //second pass: ffmpeg -y -i trimClips/V_laNt7Sh6g_12.5_22.0.mp3 -af loudnorm=I=-10:TP=-3:LRA=11:measured_I=-16.8:measured_TP=-2.0:measured_LRA=2.6:measured_thresh=-28.4:offset=4.38:print_format=summary:linear=true loudClips/V_laNt7Sh6g_12.5_22.0_2.mp3
 
+app.io.route('get_saved_videos', function(req){
+    var params = {
+        ProjectionExpression: 'movieTitle',
+        TableName: 'triviaClips',
+    }
+    dynamoDoc.scan(params, function(err, data){
+        if(err){
+            console.log("Error", err);
+        }else{
+            console.log(data.Items);
+            var uniqueVideos = Array.from(new Set(data.Items.map(function(val){return val.movieTitle.toLowerCase()})));
+            console.log(uniqueVideos);
+            req.io.emit("got_saved_videos",uniqueVideos);
+        }
+    })
+})
+
 app.io.route('post_trivia', function(req){
     var clipData = req.data;
     var params = {
@@ -136,31 +153,6 @@ app.io.route("check_video_id", function(req){
             req.io.emit("checked_video_id",data.Items);
         }
     })
-})
-
-app.io.route('dynamo_test', function(req){
-    var params = {
-        ExpressionAttributeValues: {
-            ':c':'test_clipID',
-            //':f':'first five'},
-            ':b': 'bucket_name'
-        },
-        KeyConditionExpression: 's3bucket = :b',
-        FilterExpression: /*'contains(firstFive,:f) and */'contains(clipID, :c)',
-        IndexName: 's3bucket-index',
-        ProjectionExpression: 'clipID, firstFive, s3bucket',
-        TableName: 'quotes'
-    };
-    console.log("calling dynamo");
-    dynamoDoc.query(params, function(err, data){
-        if(err){
-            console.log("Error", err);
-        }else{
-            console.log(data.Items);
-            req.io.emit("dynamo_test_done",data.Items);
-        }
-    })
-    
 })
 
 app.io.route('checkFirstFive', function(req){
@@ -574,7 +566,9 @@ app.io.route('download', function (req) {
                 //res.send(JSON.stringify({videoID: videoID}));
                 //res.send('finished');
                 //send isn't working, so probs download to local.
-            }else{
+            }
+            if(err){
+                console.log(err);
                 req.io.emit("download_error");
             }
         },

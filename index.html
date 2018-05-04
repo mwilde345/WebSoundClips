@@ -24,6 +24,23 @@
 
   <!-- Youtube Player Iframe and Logging buttons -->
   <!-- ######################################### -->
+  <div id="savedVideos">
+    <script type="text/javascript">
+      $(document).ready(function(){
+        io.emit("get_saved_videos");
+        io.on("got_saved_videos",function(data){
+          if(!data.length){
+            $("#savedVideos").html("<h3>No saved videos</h3>");
+          }else{
+            $("#savedVideos").html("<h3>Saved Videos: </h3><ul id='savedList'></ul>");
+            for(video in data){
+              $("#savedList").append("<li>"+data[video]+"</li>");
+            }
+          }
+        });
+      });  
+    </script>
+  </div>
   <div id="main" class="container">
 
     <div id="player"></div>
@@ -205,6 +222,7 @@
     var conflictObject = {};
     var deniedClips = {};
     var approvedClips = {};
+    console.log("Initialized global variables");
 
     $(document).ready(function(){
       // $("#audioStuff").hide();
@@ -222,10 +240,8 @@
       //################################
 
       $("#chooseBucketDiv input").on('change', function(){
-        console.log("pushed radio");
         $("#bucketSelect").find("option").remove();
         // $("#bucketSelect").show();
-        //quotes or trivia
         skillOption = $("input[name=options][type=radio]:checked").attr('id');
         if(skillOption=="quotes"){
           quoteBuckets.forEach(function(item, index){
@@ -251,41 +267,37 @@
       });
     });
 
-    io.on('dynamo_test_done', function(data){
-      console.log(data);
-    });
-
     io.on('checked_first_five', function(data){
       var clipIDs = data.results;
       var row = data.row;
       if(clipIDs.length){
-        console.log("row: "+row);
-        console.log("found matching clips: "+clipIDs.toString());
+        console.log("Found duplicate clips on row "+row);
         $("#clipTableBody tr:eq("+row+") #firstFive").after(checkFiveBtns);
         conflictObject[row] = clipIDs;
       }else{
         console.log("No conflicts found!");
       }
-      
     });
 
     io.on("download_progress", function (data) {
       $("#downloadProgress").attr('value',data);
-      //$("#trimOutput").append(data);
     });
+
     io.on("download_finished", function (data) {
-      //update progres bar to 100 if it isn't already there
       videoID = data;
+      console.log("Downloaded video: "+videoID);
       $("#downloadBtn").prop("disabled", false);
       // $("#audioStuff").show();
       $("audio").prop("src", 'videoSound/' + videoID + ".mp3");
       peaksFunction(peaks, videoID);
       addSegments(gatherTimes(), peaksInstance);
     });
+
     io.on("download_error", function(){
       alert("error with download. please retry");
       $("#downloadBtn").prop("disabled", false);
     });
+
     io.on('trim_done', function (data) {
       var clipID = data.clipID;
       var loudness = data.loudness;
@@ -301,7 +313,6 @@
         "<td><input value='' type='text' id='tags' placeholder='Tags'/></td>"+
         "<td><input value='' type='text' id='movie' placeholder='Movie'/></td>"+
         "<td><input value='' type='text' id='creator' placeholder='Creator'/></td></tr>";
-        //add a call to dynamo and a flag if first five are the same
       $("#clipTableBody").append(rowString);
       $("#trimProgress").val($("#clipTable audio").length);
       if($("#clipTable audio").length==peaksInstance.segments.getSegments().length){
@@ -328,7 +339,7 @@
     });
 
     io.on('s3_upload_done', function (clipID) {
-      console.log("Uploaded " + clipID);
+      console.log("Uploaded " + clipID+ " to "+s3bucket);
     });
   </script>
   <script src="js/playerjs.js"></script>
