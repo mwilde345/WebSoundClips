@@ -11,6 +11,9 @@
 //if not, insert new video entry with empty clips (or set a flag to do that later once 
 //i have all the clips)
 
+//TODO, quotes and trivia tables have first five, make that required
+//TODO clicking undo on time logs screws up the array
+
 
 function dumpClips(){
     io.emit("dump_clips");
@@ -59,6 +62,7 @@ function postClips(){
         var clipData = {
             clipID: $($(rowData).find('#clipAudio')).attr('src').match(/(.*\/)(.*)(\.mp3.*)/)[2],
             firstFive: $($(rowData).find("#firstFive")).val(),
+            character: $($(rowData).find("#character")).val(),
             essentialWords: $($(rowData).find("#essential")).val().split(',')
                 .map(function(v){return v.toLowerCase().trim()}),
             hints: $($(rowData).find("#hints")).val().split(',')
@@ -407,6 +411,7 @@ function gatherTimes() {
     $("#timeTableBody tr").each(function (index) {
         var start = parseFloat($($(this).children()[0]).text());
         var stop = $($(this).children()[1]).text();
+        
         startTimes.push(start);
         if (stop.length) {
             stop = parseFloat(stop);

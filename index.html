@@ -207,11 +207,12 @@
   <script>
     var videoID = "V_laNt7Sh6g";
     var compressedClips = [];
-    var io = io.connect("http://localhost:3000");
+    var io = io.connect("http://localhost:3001");
     var startPressed = false;
     var stopPressed = false;
     var s3bucket = "";
-    var quoteBuckets = ["soundsofswanson"];
+    var quoteBuckets = ["soundsofswanson","soundsofschrute","soundsofdwyer",
+      "soundsofschrutepaid","soundsoftheoffice/free","soundsoftheoffice/paid"];
     var triviaBuckets = ["kidsmovietrivia"];
     var skillOption = "quotes";
     clipsForThisVideo = [];
@@ -243,6 +244,7 @@
         $("#bucketSelect").find("option").remove();
         // $("#bucketSelect").show();
         skillOption = $("input[name=options][type=radio]:checked").attr('id');
+        console.log(skillOption);
         if(skillOption=="quotes"){
           quoteBuckets.forEach(function(item, index){
             $("#bucketSelect").append($("<option></option>")
@@ -308,6 +310,7 @@
         "<td><input type='text' value='" + loudness + "' id='" + clipID + "_change'></input>" +
         "<button id='changeButton' name='" + clipID + "' class='btn btn-info'>Change Loudness</button></td>"+
         "<td><input value='' type='text' id='firstFive' placeholder='First Five'/></td>"+
+        "<td><input value='' type='text' id='character' placeholder='Character'/></td>"+
         "<td><input value='' type='text' id='essential' placeholder='Essential Words'/></td>"+
         "<td><input value='' type='text' id='hints' placeholder='Hints'/></td>"+
         "<td><input value='' type='text' id='tags' placeholder='Tags'/></td>"+

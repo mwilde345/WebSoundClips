@@ -22,7 +22,7 @@ app.use(bodyParser.json());
 app.use(express.static(__dirname + '/'));
 
 //app.use(fileUpload());
-app.listen('3000');
+app.listen('3001');
 
 //ffmpeg -y -i trimClips/V_laNt7Sh6g_12.5_22.0.mp3 -af loudnorm=I=-30:TP=-3:LRA=11:print_format=summary loudClips/V_laNt7Sh6g_12.5_22.0.mp3
 //ffmpeg -i <input-file> -ac 2 -codec:a libmp3lame -b:a 48k -ar 16000 <output-file.mp3>
@@ -97,9 +97,10 @@ app.io.route('post_quote', function(req){
         Item: {
             "clipID":clipData.clipID,
             "s3bucket":clipData.s3bucket,
-            "firstFive":clipData.firstFive
+            "firstFive":clipData.firstFive,
+            "character":clipData.character
         },
-        TableName: "quotes"
+        TableName: "quote_clips"
     }
     dynamoDoc.put(params, function(err, data){
         if(err){
@@ -353,6 +354,7 @@ app.post('/upload_segments', function (req, res) {
 
 function readFile(filename, callback) {
     var fs = require('fs');
+    //TODO won't work with a file with (1) or spaces i think
     fs.readFile("uploads/"+filename, 'utf8', function (err, data) {
         if (err) throw err;
         console.log('OK: ' + filename);
@@ -547,6 +549,7 @@ app.io.route('download', function (req) {
     // });
     var url = req.data.url;
     var videoID = url.replace(/(.*)(=)(.*)/, "$3");
+    console.log('downloading');
     horizon.downloadToLocal(
         url,
         './videoSound/',
@@ -575,6 +578,7 @@ app.io.route('download', function (req) {
         //make a progress bar.
         function onConvertVideoProgress(percent, timemark, targetSize) {
             //res.write(''+percent);
+            console.log('downloading progress ' + percent);
             req.io.emit('download_progress', percent.toFixed(0));
             //console.log('Progress:', percent, 'Timemark:', timemark, 'Target Size:', targetSize);
             // Will return...
@@ -602,4 +606,4 @@ function generateWaveform(req, videoID, callback) {
         });
 }
 
-console.log('working on 3000');
+console.log('working on 3001');
