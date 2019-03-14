@@ -95,6 +95,7 @@ app.io.route('post_quote', function(req){
     var clipData = req.data;
     var params = {
         Item: {
+            "PK": "default",
             "clipID":clipData.clipID,
             "s3bucket":clipData.s3bucket,
             "firstFive":clipData.firstFive,
@@ -128,7 +129,7 @@ app.io.route("post_video", function(req){
         if (err){
             console.log(err.stack);
             //console.log(err, err.stack); // an error occurred
-        } 
+        }
         else {
             console.log(data);
             req.io.emit("posted_video", data);
@@ -198,14 +199,14 @@ app.io.route('checkFirstFive', function(req){
                     dynamoDoc.scan(params, onScan);
                 }else{
                     console.log("emitting for row: "+row);
-                    req.io.emit("checked_first_five",{results: results, row: row});  
+                    req.io.emit("checked_first_five",{results: results, row: row});
                 }
             }
         }
         //req.io.emit("checked_first_five",{results: results, row: row});
     });
 
-    
+
     //dynamo_call(firstFives);
 /*
 return:
@@ -245,7 +246,7 @@ app.post('/save_segments', function(req, res){
         //res.send("times have been downloaded");
         console.log("The file was saved!");
     });
-    //res.download(filename);   
+    //res.download(filename);
 });
 
 app.post('/save_times', function(req, res){
@@ -272,7 +273,7 @@ app.post('/save_times', function(req, res){
         //res.send("times have been downloaded");
         console.log("The file was saved!");
     });
-    //res.download(filename);   
+    //res.download(filename);
 });
 
 app.post('/upload', function (req, res) {
@@ -520,9 +521,9 @@ function dumpClips(callback) {
                 })
             }
         });
-        
+
     });
-  
+
 }
 
 function trimClip(data, callback) {
