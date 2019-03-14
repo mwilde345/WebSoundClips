@@ -78,6 +78,7 @@ function postClips(){
             clipData = {
                 clipID: clipData.clipID,
                 firstFive: clipData.firstFive,
+                character: clipData.character,
                 s3bucket: s3bucket
             }
         }

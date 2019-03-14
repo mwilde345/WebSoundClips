@@ -98,9 +98,9 @@ app.io.route('post_quote', function(req){
             "clipID":clipData.clipID,
             "s3bucket":clipData.s3bucket,
             "firstFive":clipData.firstFive,
-            "character":clipData.character
+            "characterName":clipData.character
         },
-        TableName: "quote_clips"
+        TableName: "quote_list"
     }
     dynamoDoc.put(params, function(err, data){
         if(err){
@@ -166,7 +166,7 @@ app.io.route('checkFirstFive', function(req){
         var firstFive = item.firstFive.toLowerCase().trim();
         if(skillOption=="trivia"){
             var table = "triviaClips";
-        }else var table = "quotes";
+        }else var table = "quote_clips";
         var params = {
             TableName: table,
             ProjectionExpression: "clipID",
